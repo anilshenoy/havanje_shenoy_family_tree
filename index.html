@@ -206,6 +206,8 @@
     width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: var(--radius);
     background: var(--card-bg); font-family: Helvetica, Arial, sans-serif; font-size: 0.92rem; color: var(--ink);
   }
+  .field select[size]{ font-size: 0.85rem; padding: 4px; }
+  .field select[size] option{ padding: 5px 6px; }
   .field textarea{ resize: vertical; min-height: 55px; }
   .checkbox-row{ display:flex; align-items:center; gap:8px; font-family: Helvetica, Arial, sans-serif; font-size:0.82rem; color: var(--ink-soft); }
   .sheet-actions{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
@@ -989,6 +991,12 @@ function openEditSheet(personId){
       <input type="text" id="editName" value="${esc(person.name)}">
     </div>
     <div class="field">
+      <label for="parentFilter">Parent &mdash; who this person is a child of</label>
+      <input type="text" id="parentFilter" placeholder="Type to filter the list below&hellip;" autocomplete="off">
+      <select id="editParent" size="6" style="margin-top:6px;"></select>
+      <div class="hint" id="parentMoveWarning" style="margin:6px 0 0;"></div>
+    </div>
+    <div class="field">
       <label for="editLocation">Location</label>
       <input type="text" id="editLocation" value="${esc(person.location || "")}" placeholder="e.g. Mangaluru, India">
     </div>
@@ -1013,6 +1021,51 @@ function openEditSheet(personId){
     </div>
   `;
   openOverlay();
+
+  // Build the parent options: everyone except this person and their own descendants
+  // (picking one of those would create a loop).
+  const blocked = new Set([personId, ...allDescendantIds(personId)]);
+  const candidates = people
+    .filter(p => !blocked.has(p.id))
+    .map(p => {
+      const parentName = p.parentId ? (findPerson(p.parentId)?.name || "?") : null;
+      return { id: p.id, label: p.name + (parentName ? " \u2014 under " + parentName : " \u2014 top of tree") };
+    })
+    .sort((a,b) => a.label.localeCompare(b.label));
+
+  const parentSelect = document.getElementById("editParent");
+  function renderParentOptions(filterText){
+    const q = (filterText || "").toLowerCase();
+    parentSelect.innerHTML = "";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "\u2014 No parent (start of a new branch) \u2014";
+    if(!person.parentId) noneOpt.selected = true;
+    if(!q || noneOpt.textContent.toLowerCase().includes(q)) parentSelect.appendChild(noneOpt);
+    candidates
+      .filter(c => !q || c.label.toLowerCase().includes(q))
+      .forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.label;
+        if(c.id === person.parentId) opt.selected = true;
+        parentSelect.appendChild(opt);
+      });
+  }
+  renderParentOptions("");
+
+  document.getElementById("parentFilter").addEventListener("input", (e)=> renderParentOptions(e.target.value));
+  parentSelect.addEventListener("change", ()=>{
+    const warn = document.getElementById("parentMoveWarning");
+    if(parentSelect.value !== (person.parentId || "")){
+      warn.textContent = kidsCount
+        ? `Moving ${person.name} will bring their ${kidsCount} recorded child${kidsCount>1?"ren":""} along with them.`
+        : `${person.name} will move to this new parent when you save.`;
+    } else {
+      warn.textContent = "";
+    }
+  });
+
   document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
   document.getElementById("addChildFromEditBtn").addEventListener("click", ()=> openAddSheet(personId));
   document.getElementById("saveEditBtn").addEventListener("click", ()=>{
@@ -1021,14 +1074,17 @@ function openEditSheet(personId){
     const locationVal = document.getElementById("editLocation").value.trim();
     const deceasedVal = document.getElementById("editDeceased").checked;
     const uncertainVal = document.getElementById("editUncertain").checked;
+    const newParentId = document.getElementById("editParent").value || null;
     if(!nameVal){ showToast("Name can't be empty."); return; }
     person.name = nameVal;
     if(noteVal) person.note = noteVal; else delete person.note;
     if(locationVal) person.location = locationVal; else delete person.location;
     if(deceasedVal) person.deceased = true; else delete person.deceased;
     if(uncertainVal) person.uncertain = true; else delete person.uncertain;
+    const parentChanged = newParentId !== (person.parentId || null);
+    person.parentId = newParentId;
     saveData(); closeOverlay(); render();
-    showToast("Saved");
+    showToast(parentChanged ? "Saved \u2014 moved to new parent" : "Saved");
   });
   document.getElementById("deleteBtn").addEventListener("click", ()=>{
     const desc = allDescendantIds(personId);
