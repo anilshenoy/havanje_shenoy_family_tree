@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Havanje Shenoy Family Tree</title>
+<style>
+  :root{
+    --parchment: #f2e9d8;
+    --parchment-dark: #e6d8bd;
+    --ink: #2e2418;
+    --ink-soft: #5c4a35;
+    --walnut: #6b3f24;
+    --gold: #a9772f;
+    --gold-light: #d3a05a;
+    --line: #8a744f;
+    --new-mark: #7a3b8f;
+    --danger: #9c3b2c;
+    --uncertain: #b8860b;
+    --card-bg: #fbf6ea;
+    --radius: 4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background: var(--parchment);
+    color: var(--ink);
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+  }
+  header{
+    padding: 14px 16px 10px;
+    border-bottom: 2px solid var(--line);
+    background: linear-gradient(180deg, var(--parchment-dark), var(--parchment));
+    flex: 0 0 auto;
+  }
+  header h1{
+    margin:0;
+    font-size: 1.25rem;
+    letter-spacing: 0.01em;
+    color: var(--walnut);
+    font-weight: 700;
+  }
+  header .subtitle{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  .toolbar{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--parchment);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+    align-items:center;
+  }
+  .toolbar input[type=text]{
+    flex: 1 1 130px;
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    background: var(--card-bg);
+    color: var(--ink);
+  }
+  button{ font-family: Helvetica, Arial, sans-serif; cursor: pointer; }
+  .btn{
+    border: 1px solid var(--walnut);
+    background: var(--card-bg);
+    color: var(--walnut);
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primary{ background: var(--walnut); color: var(--parchment); border-color: var(--walnut); }
+  .zoom-group{ display:flex; gap:2px; }
+  .zoom-group .btn{ padding: 8px 12px; }
+  .stats{
+    padding: 5px 14px;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    flex: 0 0 auto;
+    display:flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .legend{ display:flex; gap:12px; align-items:center; }
+  .legend span{ display:inline-flex; align-items:center; gap:4px; }
+  .swatch{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+  .swatch.uncertain{ border: 1.5px dashed var(--uncertain); background:transparent; }
+  .swatch.normal{ background: var(--card-bg); border: 1px solid var(--line); }
+
+  #canvasWrap{
+    flex: 1 1 auto;
+    overflow: auto;
+    position: relative;
+    background:
+      radial-gradient(circle at 15% 8%, rgba(169,119,47,0.08), transparent 42%),
+      radial-gradient(circle at 92% 85%, rgba(107,63,36,0.07), transparent 48%),
+      var(--parchment);
+    -webkit-overflow-scrolling: touch;
+  }
+  svg{ display:block; }
+  .node-box{
+    fill: var(--card-bg);
+    stroke: var(--walnut);
+    stroke-width: 1.2;
+    rx: 5;
+  }
+  .node-box.uncertain{
+    stroke: var(--uncertain);
+    stroke-dasharray: 4 2;
+    stroke-width: 1.4;
+  }
+  .node-box.match{
+    fill: #f0dcae;
+    stroke: var(--gold);
+    stroke-width: 2;
+  }
+  .node-group{ cursor: pointer; }
+  .node-text{
+    font-family: Georgia, serif;
+    font-size: 12.5px;
+    fill: var(--ink);
+    pointer-events: none;
+  }
+  .note-flag{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9px;
+    fill: var(--uncertain);
+    pointer-events: none;
+  }
+  .location-text{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9.5px;
+    font-style: italic;
+    fill: var(--ink-soft);
+    pointer-events: none;
+  }
+  .connector{
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1.3;
+  }
+  .toggle-badge circle{
+    fill: var(--card-bg);
+    stroke: var(--gold);
+    stroke-width: 1.2;
+  }
+  .toggle-badge text{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    fill: var(--walnut);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+  }
+  .toggle-badge{ cursor: pointer; }
+
+  .overlay{
+    position: fixed; inset: 0;
+    background: rgba(46,36,24,0.45);
+    display:flex; align-items: flex-end; justify-content: center;
+    z-index: 100;
+  }
+  .overlay.hidden{ display:none; }
+  .sheet{
+    background: var(--parchment);
+    width: 100%; max-width: 480px;
+    border-radius: 14px 14px 0 0;
+    padding: 18px 18px 24px;
+    max-height: 85vh; overflow-y: auto;
+    border-top: 3px solid var(--gold);
+    position:relative;
+  }
+  .sheet h2{ margin: 0 0 4px; font-size: 1.1rem; color: var(--walnut); }
+  .sheet .hint{
+    font-family: Helvetica, Arial, sans-serif; font-size: 0.74rem;
+    color: var(--ink-soft); margin-bottom: 12px; line-height:1.4;
+  }
+  .sheet .uncertain-note{
+    font-family: Helvetica, Arial, sans-serif; font-size: 0.75rem;
+    color: var(--uncertain); background: rgba(184,134,11,0.1);
+    border: 1px dashed var(--uncertain); border-radius: var(--radius);
+    padding: 8px 10px; margin-bottom: 12px; line-height:1.4;
+  }
+  .field{ margin-bottom: 12px; }
+  .field label{
+    display:block; font-family: Helvetica, Arial, sans-serif; font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 4px;
+  }
+  .field input[type=text], .field select, .field textarea{
+    width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--card-bg); font-family: Helvetica, Arial, sans-serif; font-size: 0.92rem; color: var(--ink);
+  }
+  .field select[size]{ font-size: 0.85rem; padding: 4px; }
+  .field select[size] option{ padding: 5px 6px; }
+  .field textarea{ resize: vertical; min-height: 55px; }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; font-family: Helvetica, Arial, sans-serif; font-size:0.82rem; color: var(--ink-soft); }
+  .sheet-actions{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .sheet-actions .btn{ flex: 1 1 auto; text-align:center; }
+  .close-x{ position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 1.3rem; color: var(--ink-soft); }
+
+  .toast{
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--parchment); padding: 9px 16px; border-radius: 20px;
+    font-family: Helvetica, Arial, sans-serif; font-size: 0.8rem; z-index: 200;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .toast.show{ opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Havanje Shenoy Family Tree</h1>
+  <div class="subtitle">Open this file in any browser, no account needed. Use "Share / Sync" to either connect everyone to one shared Google Sheet (updates automatically), or pass snapshots around by hand. Search by name or place, or filter to living/deceased. Dashed gold boxes are placements still being confirmed.</div>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="searchBox" placeholder="Find a name or place&hellip;" autocomplete="off">
+  <select id="statusFilter" class="btn" style="padding:8px 6px;">
+    <option value="all">Everyone</option>
+    <option value="living">Living only</option>
+    <option value="deceased">Deceased only</option>
+  </select>
+  <div class="zoom-group">
+    <button class="btn" id="zoomOutBtn">&minus;</button>
+    <button class="btn" id="zoomInBtn">+</button>
+  </div>
+  <button class="btn" id="expandAllBtn">Expand all</button>
+  <button class="btn" id="collapseAllBtn">Collapse all</button>
+  <button class="btn btn-primary" id="addRootBtn">+ New branch</button>
+  <button class="btn" id="syncBtn">Share / Sync</button>
+</div>
+<div class="stats">
+  <span id="statsLine"></span>
+  <span class="legend">
+    <span><span class="swatch normal"></span>confirmed</span>
+    <span><span class="swatch uncertain"></span>uncertain placement</span>
+  </span>
+</div>
+
+<div id="canvasWrap">
+  <svg id="treeSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- seed data (corrected transcription) ----------
+   uncertain:true  -> placement/attachment in the tree is not fully confirmed from the photo
+   note            -> extra context worth keeping (annotations seen in the original, etc.)
+*/
+const SEED = [
+  {id:"appayya_sr", name:"Appayya Shenoy", parentId:null, uncertain:true, note:"Top of the chart, above Raya Shenoy's generation. Placed here as father of Narasappa Shenoy \u2014 please confirm whether that's correct, or whether Appayya and Narasappa Shenoy were instead brothers with an unlisted father."},
+  {id:"narasappa", name:"Narasappa Shenoy", parentId:"appayya_sr", uncertain:true, note:"Placed as Appayya Shenoy's son and father of Raya, Nagappa, and Anathayya Shenoy \u2014 please confirm this line."},
+
+  {id:"raya", name:"Raya Shenoy", parentId:"narasappa", note:"A small \u201c3\u201d appears under this name in the original document \u2014 meaning unclear."},
+  {id:"nagappa", name:"Nagappa Shenoy", parentId:"narasappa", note:"Confirmed by family as Raya Shenoy's brother, not his son."},
+  {id:"anathayya", name:"Anathayya Shenoy", parentId:"narasappa", note:"Confirmed by family as Raya Shenoy's brother, not his son."},
+
+  {id:"ramachadra", name:"Ramachadra Shenoy", parentId:"raya", note:"A small \u201c8\u201d appears under this name in the original document \u2014 meaning unclear."},
+  {id:"appayya", name:"Appayya Shenoy", parentId:"raya"},
+  {id:"jagannath", name:"Jagannath Shenoy", parentId:"raya"},
+  {id:"srinivas1", name:"Srinivas Shenoy", parentId:"raya"},
+  {id:"ananthayya", name:"Ananthayya Shenoy", parentId:"raya"},
+
+  // Ramachadra branch
+  {id:"devanna", name:"Devanna Shenoy", parentId:"ramachadra"},
+  {id:"kamalaksha1", name:"Kamalaksha Shenoy", parentId:"ramachadra", note:"A small number (looks like \u201c22\u201d) appears beside this name \u2014 meaning unclear."},
+
+  {id:"ganesh1", name:"Ganesh Shenoy", parentId:"devanna"},
+  {id:"sathish1", name:"Sathish Shenoy", parentId:"devanna", note:"A small number appears beside this name in the original \u2014 meaning unclear."},
+  {id:"vasanth1", name:"Vasanth Shenoy", parentId:"devanna"},
+  {id:"nagesh1", name:"Nagesh Shenoy", parentId:"ganesh1", note:"A small number (looks like \u201c19\u201d) appears beside this name \u2014 meaning unclear."},
+  {id:"sandeep", name:"Sandeep Shenoy", parentId:"sathish1"},
+  {id:"rahul", name:"Rahul Shenoy", parentId:"sathish1"},
+  {id:"aman", name:"Aman Shenoy", parentId:"sandeep"},
+
+  {id:"kishore", name:"Kishore Shenoy", parentId:"kamalaksha1"},
+  {id:"ashok", name:"Ashok Shenoy", parentId:"kamalaksha1"},
+  {id:"pradeep", name:"Pradeep Shenoy", parentId:"kamalaksha1"},
+  {id:"santhosh1", name:"Santhosh Shenoy", parentId:"kamalaksha1"},
+  {id:"prasanth", name:"Prasanth Shenoy", parentId:"kamalaksha1"},
+  {id:"dayananda", name:"Dayananda Shenoy", parentId:"kamalaksha1"},
+  {id:"sadananda", name:"Sadananda Shenoy", parentId:"kamalaksha1"},
+  {id:"kunal", name:"Kunal Shenoy", parentId:"pradeep"},
+  {id:"sanjith", name:"Sanjith Shenoy", parentId:"prasanth"},
+  {id:"krishnadas1", name:"Krishnadas Shenoy", parentId:"dayananda"},
+  {id:"ravindra", name:"Ravindra Shenoy", parentId:"sadananda"},
+  {id:"ramesh_sad", name:"Ramesh Shenoy", parentId:"sadananda"},
+  {id:"vinod", name:"Vinod Shenoy", parentId:"sadananda"},
+  {id:"vasanth2", name:"Vasanth Shenoy", parentId:"sadananda"},
+  {id:"ashesh", name:"Ashesh Shenoy", parentId:"vinod"},
+
+  // Appayya branch
+  {id:"vittal", name:"Vittal Shenoy", parentId:"appayya"},
+  {id:"panduranga", name:"Panduranga Shenoy", parentId:"vittal"},
+  {id:"upendra", name:"Upendra Shenoy", parentId:"vittal"},
+  {id:"devaraya", name:"Devaraya Shenoy", parentId:"vittal"},
+  {id:"padmanabha1", name:"Padmanabha Shenoy", parentId:"vittal", note:"Confirmed by family as a direct son of Vittal Shenoy."},
+  {id:"madhava", name:"Madhava Shenoy", parentId:"vittal", note:"Confirmed by family as a direct son of Vittal Shenoy."},
+
+  {id:"kamalaksha2", name:"Kamalaksha Shenoy", parentId:"panduranga"},
+  {id:"umanath1", name:"Umanath Shenoy", parentId:"panduranga"},
+  {id:"premananda", name:"Premananda Shenoy", parentId:"panduranga"},
+  {id:"prabhakar", name:"Prabhakar Shenoy", parentId:"panduranga"},
+  {id:"rohidas1", name:"Rohidas Shenoy", parentId:"panduranga"},
+  {id:"dinesh1", name:"Dinesh Shenoy", parentId:"panduranga", note:"Underlined in blue ink in the original, unlike the surrounding names \u2014 possibly a later addition or correction."},
+
+  {id:"durgadas", name:"Durgadas Shenoy", parentId:"kamalaksha2"},
+  {id:"saketh", name:"Saketh Shenoy", parentId:"durgadas"},
+  {id:"ruchir", name:"Ruchir Shenoy", parentId:"durgadas"},
+  {id:"madhukar", name:"Madhukar Shenoy", parentId:"premananda"},
+  {id:"manish", name:"Manish Shenoy", parentId:"madhukar"},
+  {id:"janardhan", name:"Janardhan Shenoy", parentId:"rohidas1"},
+  {id:"samith", name:"Samith Shenoy", parentId:"janardhan"},
+  {id:"pradyoth", name:"Pradyoth Shenoy", parentId:"janardhan"},
+  {id:"jayanth", name:"Jayanth Shenoy", parentId:"janardhan"},
+  {id:"ajith", name:"Ajith Shenoy", parentId:"dinesh1"},
+  {id:"ananth1", name:"Ananth Shenoy", parentId:"dinesh1"},
+
+  {id:"chandrakath", name:"Chandrakath Shenoy", parentId:"upendra"},
+  {id:"satendra", name:"Satendra Shenoy", parentId:"upendra"},
+  {id:"suresh1", name:"Suresh Shenoy", parentId:"upendra"},
+  {id:"rajesh1", name:"Rajesh Shenoy", parentId:"chandrakath"},
+  {id:"gurudatta", name:"Gurudatta Shenoy", parentId:"chandrakath"},
+  {id:"sudhir1", name:"Sudhir Shenoy", parentId:"satendra"},
+  {id:"sunil", name:"Sunil Shenoy", parentId:"satendra"},
+  {id:"anil", name:"Anil Shenoy", parentId:"suresh1"},
+  {id:"ajay", name:"Ajay Shenoy", parentId:"suresh1"},
+
+  {id:"ramesh_dev", name:"Ramesh Shenoy", parentId:"devaraya"},
+  {id:"prakash", name:"Prakash Shenoy", parentId:"devaraya"},
+  {id:"jagadish", name:"Jagadish Shenoy", parentId:"devaraya"},
+  {id:"ashwin", name:"Ashwin Shenoy", parentId:"prakash", note:"Confirmed by family as Prakash Shenoy's son."},
+  {id:"gautam", name:"Gautam Shenoy", parentId:"jagadish", note:"Confirmed by family as Jagadish Shenoy's son."},
+  {id:"girish", name:"Girish Shenoy", parentId:"jagadish", note:"Confirmed by family as Jagadish Shenoy's son."},
+
+  // Jagannath branch
+  {id:"keshav", name:"Keshav Shenoy", parentId:"jagannath"},
+  {id:"madhavaraya1", name:"Madhavaraya Shenoy", parentId:"keshav"},
+  {id:"rayappa", name:"Rayappa Shenoy", parentId:"keshav"},
+  {id:"mohan", name:"Mohan Shenoy", parentId:"madhavaraya1", note:"Confirmed by family as Madhavaraya Shenoy's son."},
+  {id:"nagesh2", name:"Nagesh Shenoy", parentId:"madhavaraya1", note:"Confirmed by family as Madhavaraya Shenoy's son."},
+  {id:"sanjay", name:"Sanjay Shenoy", parentId:"rayappa", note:"Confirmed by family as Rayappa Shenoy's son."},
+  {id:"vijay", name:"Vijay Shenoy", parentId:"rayappa", note:"Confirmed by family as Rayappa Shenoy's son."},
+  {id:"manoj", name:"Manoj Shenoy", parentId:"mohan"},
+  {id:"anuj", name:"Anuj Shenoy", parentId:"mohan"},
+  {id:"varun", name:"Varun Shenoy", parentId:"mohan"},
+
+  // Srinivas branch
+  {id:"vasudev", name:"Vasudev Shenoy", parentId:"srinivas1"},
+  {id:"radhakrishna", name:"Radhakrishna Shenoy", parentId:"srinivas1"},
+  {id:"gopal1", name:"Gopal Shenoy", parentId:"srinivas1"},
+  {id:"devadas", name:"Devadas Shenoy", parentId:"vasudev"},
+  {id:"srinivas2", name:"Srinivas Shenoy", parentId:"devadas"},
+  {id:"mohandas", name:"Mohandas Shenoy", parentId:"devadas"},
+  {id:"gokuldas", name:"Gokuldas Shenoy", parentId:"devadas"},
+  {id:"krishnadas2", name:"Krishnadas Shenoy", parentId:"devadas"},
+  {id:"rohidas2", name:"Rohidas Shenoy", parentId:"devadas"},
+  {id:"mitradas", name:"Mitradas Shenoy", parentId:"devadas"},
+  {id:"ravindradas", name:"Ravindradas Shenoy", parentId:"devadas"},
+  {id:"mithun", name:"Mithun Shenoy", parentId:"mohandas"},
+  {id:"mayur", name:"Mayur Shenoy", parentId:"mohandas"},
+  {id:"nagesh3", name:"Nagesh Shenoy", parentId:"mohandas"},
+  {id:"vignesh", name:"Vignesh Shenoy", parentId:"gokuldas"},
+  {id:"rakshit", name:"Rakshit Shenoy", parentId:"rohidas2"},
+  {id:"raghuveer", name:"Raghuveer Shenoy", parentId:"radhakrishna"},
+  {id:"raghuram", name:"Raghuram Shenoy", parentId:"radhakrishna"},
+
+  // Ananthayya branch
+  {id:"raghunath", name:"Raghunath Shenoy", parentId:"ananthayya"},
+  {id:"sanjeeva", name:"Sanjeeva Shenoy", parentId:"ananthayya"},
+  {id:"ramesh_ana", name:"Ramesh Shenoy", parentId:"ananthayya"},
+  {id:"bhaskar1", name:"Bhaskar Shenoy", parentId:"ananthayya"},
+  {id:"dinesh2", name:"Dinesh Shenoy", parentId:"raghunath"},
+  {id:"harish", name:"Harish Shenoy", parentId:"raghunath"},
+  {id:"muralidhar", name:"Muralidhar Shenoy", parentId:"raghunath"},
+  {id:"jayadeva", name:"Jayadeva Shenoy", parentId:"dinesh2"},
+  {id:"srinivas3", name:"Srinivas Shenoy", parentId:"sanjeeva"},
+  {id:"suresh2", name:"Suresh Shenoy", parentId:"sanjeeva"},
+  {id:"sudhir2", name:"Sudhir Shenoy", parentId:"sanjeeva"},
+  {id:"sathish2", name:"Sathish Shenoy", parentId:"sanjeeva"},
+  {id:"nagesh4", name:"Nagesh Shenoy", parentId:"sanjeeva"},
+  {id:"sachin", name:"Sachin Shenoy", parentId:"srinivas3"},
+  {id:"shakthik", name:"Shakthik Shenoy", parentId:"suresh2"},
+  {id:"karthik1", name:"Karthik Shenoy", parentId:"sudhir2"},
+  {id:"shashank", name:"Shashank Shenoy", parentId:"sathish2", note:"Written in purple ink, unlike the rest of the page \u2014 appears to be a recent addition to the family record."},
+
+  // Nagappa branch (corrected: Narayana Shenoy is Nagappa's son, not Raya's)
+  {id:"narayana1", name:"Narayana Shenoy", parentId:"nagappa", note:"Corrected placement: this is a son of Nagappa Shenoy (sibling of Narasimha and Manjunath Shenoy), not a direct son of Raya Shenoy as first transcribed."},
+  {id:"narasimha", name:"Narasimha Shenoy", parentId:"nagappa"},
+  {id:"manjunath", name:"Manjunath Shenoy", parentId:"nagappa"},
+
+  {id:"padmanbha", name:"Padmanbha Shenoy", parentId:"narayana1"},
+  {id:"nagesh5", name:"Nagesh Shenoy", parentId:"narayana1"},
+  {id:"narayana2", name:"Narayana Shenoy", parentId:"padmanbha"},
+  {id:"madhavaraya2", name:"Madhavaraya Shenoy", parentId:"padmanbha"},
+  {id:"gopal2", name:"Gopal Shenoy", parentId:"padmanbha"},
+  {id:"sridhar", name:"Sridhar Shenoy", parentId:"nagesh5"},
+  {id:"shankar", name:"Shankar Shenoy", parentId:"nagesh5"},
+  {id:"bhaskar2", name:"Bhaskar Shenoy", parentId:"nagesh5"},
+  {id:"dinakar", name:"Dinakar Shenoy", parentId:"nagesh5"},
+  {id:"diwakar", name:"Diwakar Shenoy", parentId:"nagesh5"},
+  {id:"padmanabha2", name:"Padmanabha Shenoy", parentId:"narayana2"},
+  {id:"vasanth3", name:"Vasanth Shenoy", parentId:"narayana2"},
+  {id:"karthik2", name:"Karthik Shenoy", parentId:"padmanabha2"},
+  {id:"ghanashyam", name:"Ghanashyam Shenoy", parentId:"madhavaraya2"},
+  {id:"murali", name:"Murali Shenoy", parentId:"madhavaraya2"},
+  {id:"sairanth", name:"Sairanth Shenoy", parentId:"murali"},
+  {id:"srikanth", name:"Srikanth Shenoy", parentId:"sridhar"},
+  {id:"santhosh2", name:"Santhosh Shenoy", parentId:"bhaskar2"},
+
+  {id:"govindraya", name:"Govindraya Shenoy", parentId:"narasimha"},
+  {id:"ganapathy", name:"Ganapathy Shenoy", parentId:"narasimha"},
+  {id:"vaman", name:"Vaman Shenoy", parentId:"narasimha"},
+  {id:"ramanath", name:"Ramanath Shenoy", parentId:"narasimha"},
+  {id:"ramesh_gan", name:"Ramesh Shenoy", parentId:"ganapathy"},
+  {id:"rajesh2", name:"Rajesh Shenoy", parentId:"ramesh_gan"},
+  {id:"rohith", name:"Rohith Shenoy", parentId:"ramesh_gan"},
+  {id:"sarvotham", name:"Sarvotham Shenoy", parentId:"vaman"},
+  {id:"umanath2", name:"Umanath Shenoy", parentId:"vaman"},
+  {id:"venkatesh", name:"Venkatesh Shenoy", parentId:"umanath2"},
+  {id:"ananth2", name:"Ananth Shenoy", parentId:"umanath2"},
+  {id:"ganesh2", name:"Ganesh Shenoy", parentId:"ramanath"},
+  {id:"nagaraj", name:"Nagaraj Shenoy", parentId:"ramanath"},
+  {id:"nagabhushan", name:"Nagabhushan Shenoy", parentId:"nagaraj"},
+  {id:"suraj", name:"Suraj Shenoy", parentId:"nagaraj"},
+  {id:"gopal3", name:"Gopal Shenoy", parentId:"manjunath"},
+  {id:"laxminarayana", name:"Laxminarayana Shenoy", parentId:"gopal3"},
+  {id:"sathish3", name:"Sathish Shenoy", parentId:"gopal3"},
+  {id:"yogesh", name:"Yogesh Shenoy", parentId:"gopal3"},
+  {id:"arun", name:"Arun Shenoy", parentId:"laxminarayana"},
+];
+
+/* ---------- state ---------- */
+let people = [];
+let collapsedIds = new Set();
+let scale = 1;
+let sheetUrl = null;
+let syncing = false;
+let lastSyncOk = null;
+const STORAGE_KEY = "shenoy-tree-people-local-v1";
+const COLLAPSE_KEY = "shenoy-tree-collapsed-local";
+const SHEET_URL_KEY = "shenoy-tree-sheet-url";
+const POLL_MS = 20000;
+// Baked in so anyone who opens this page connects automatically \u2014 no setup needed.
+const DEFAULT_SHEET_URL = "https://script.google.com/macros/s/AKfycbxtKL8L2VIZ1UYIseMvlYEdyIFauxrZh7XYsdadXmZRBkyQcSWIhotPNBEoO6uD1r4l/exec";
+
+const BOX_W = 176, BOX_H = 40;
+const ROW_H = 52, COL_W = 236;
+const PAD = 40;
+
+const svg = document.getElementById("treeSvg");
+const canvasWrap = document.getElementById("canvasWrap");
+const statsLine = document.getElementById("statsLine");
+const searchBox = document.getElementById("searchBox");
+const statusFilter = document.getElementById("statusFilter");
+const overlay = document.getElementById("overlay");
+const sheet = document.getElementById("sheet");
+const toastEl = document.getElementById("toast");
+
+function uid(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> toastEl.classList.remove("show"), 2200);
+}
+
+/* This file is self-contained on purpose: everyone opens the same HTML file
+   (emailed, shared via Drive/Dropbox, or hosted anywhere) in any browser, no
+   account needed. It works two ways:
+   - Not connected: each device keeps its own copy in local storage, and
+     Share/Sync moves snapshots around by hand.
+   - Connected to a Google Sheet (via a small Apps Script web app URL,
+     see the "Connect" option in Share/Sync): every device reads and writes
+     the same shared sheet, polling for changes so it stays roughly live. */
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    people = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SEED));
+  }catch(e){
+    people = JSON.parse(JSON.stringify(SEED));
+  }
+  try{
+    const raw2 = localStorage.getItem(COLLAPSE_KEY);
+    if(raw2) collapsedIds = new Set(JSON.parse(raw2));
+  }catch(e){ /* non-critical */ }
+  try{ sheetUrl = localStorage.getItem(SHEET_URL_KEY) || DEFAULT_SHEET_URL || null; }catch(e){ sheetUrl = DEFAULT_SHEET_URL || null; }
+
+  render();
+
+  if(sheetUrl){
+    fetchFromSheet(true);
+    setInterval(()=>{
+      if(overlay.classList.contains("hidden")) fetchFromSheet(false);
+    }, POLL_MS);
+  }
+}
+
+function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(people)); }
+  catch(e){ console.error(e); showToast("Could not save to this device."); }
+  if(sheetUrl) pushToSheet();
+}
+
+function saveCollapse(){
+  try{ localStorage.setItem(COLLAPSE_KEY, JSON.stringify(Array.from(collapsedIds))); }
+  catch(e){ /* non-critical */ }
+}
+
+async function fetchFromSheet(isInitial){
+  if(!sheetUrl) return;
+  syncing = true;
+  try{
+    const res = await fetch(sheetUrl, {method:"GET"});
+    const data = await res.json();
+    if(!Array.isArray(data.people)) throw new Error("Unexpected response shape");
+
+    if(data.people.length === 0 && people.length > 0){
+      if(isInitial){
+        // Brand-new, empty sheet: upload what's on this device as the starting point.
+        await pushToSheet();
+        lastSyncOk = true;
+        showToast("Sheet was empty \u2014 uploaded this device's tree as the starting point");
+      }
+      // A background poll returning empty while we have local data is treated as
+      // a fluke, not a real deletion \u2014 don't let it silently wipe the tree.
+    } else {
+      people = data.people;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(people));
+      lastSyncOk = true;
+      if(isInitial) showToast("Connected \u2014 loaded the shared sheet");
+    }
+    render();
+  }catch(e){
+    console.error("sheet fetch failed", e);
+    lastSyncOk = false;
+    if(isInitial) showToast("Couldn't reach the shared sheet \u2014 showing your last local copy");
+    render();
+  }
+  syncing = false;
+}
+
+async function pushToSheet(){
+  if(!sheetUrl) return;
+  syncing = true;
+  try{
+    await fetch(sheetUrl, {method:"POST", body: JSON.stringify({people})});
+    lastSyncOk = true;
+  }catch(e){
+    console.error("sheet push failed", e);
+    lastSyncOk = false;
+    showToast("Saved on this device, but couldn't reach the shared sheet");
+  }
+  syncing = false;
+  render();
+}
+
+function connectToSheet(url){
+  sheetUrl = url.trim();
+  try{ localStorage.setItem(SHEET_URL_KEY, sheetUrl); }catch(e){ /* non-critical */ }
+  fetchFromSheet(true);
+}
+function disconnectSheet(){
+  sheetUrl = null;
+  try{ localStorage.removeItem(SHEET_URL_KEY); }catch(e){ /* non-critical */ }
+  showToast("Disconnected \u2014 back to this device's own copy");
+  render();
+}
+
+/* ---------- export / import (manual sync) + Google Sheet connect (live sync) ---------- */
+function openSyncSheet(){
+  const connected = !!sheetUrl;
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>Share updates with family</h2>
+
+    ${connected ? `
+      <div class="hint">Connected to a shared Google Sheet. Every device with this URL reads and writes the same data, refreshing about every 20 seconds automatically.</div>
+      <div class="sheet-actions">
+        <button class="btn" id="refreshNowBtn">Refresh now</button>
+        <button class="btn btn-danger" id="disconnectBtn">Disconnect this device</button>
+      </div>
+      <div class="hint" style="margin-top:14px;">Sheet URL on this device (for reference):</div>
+      <textarea readonly style="min-height:50px; font-family:monospace; font-size:0.7rem;">${esc(sheetUrl)}</textarea>
+    ` : `
+      <div class="hint">Two ways to keep everyone's copy in sync:</div>
+      <div class="field" style="margin-top:10px;">
+        <label for="sheetUrlInput">Connect to a shared Google Sheet (live-ish sync, everyone edits the same data)</label>
+        <input type="text" id="sheetUrlInput" placeholder="Paste the Apps Script web app URL">
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-primary" id="connectBtn">Connect</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">Don't have one set up yet? Ask whoever built this page for the Apps Script setup steps \u2014 it takes about five minutes, one time.</div>
+    `}
+
+    <div class="field" style="margin-top:20px; border-top:1px dashed var(--line); padding-top:14px;">
+      <label>Export &mdash; copy this and send it, or download it as a file (also works as a backup)</label>
+      <textarea id="exportBox" readonly style="min-height:110px; font-family: monospace; font-size:0.75rem;"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="copyExportBtn">Copy text</button>
+      <button class="btn" id="downloadExportBtn">Download file</button>
+    </div>
+    <div class="field" style="margin-top:18px;">
+      <label for="importBox">Import &mdash; paste a snapshot someone sent you</label>
+      <textarea id="importBox" placeholder="Paste the exported text here"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <label class="btn" style="text-align:center; margin:0;">
+        Choose a file instead
+        <input type="file" id="importFileInput" accept="application/json,.json,.txt" style="display:none;">
+      </label>
+      <button class="btn btn-primary" id="loadImportBtn">Replace tree with this</button>
+    </div>
+  `;
+  openOverlay();
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+
+  if(connected){
+    document.getElementById("refreshNowBtn").addEventListener("click", ()=> fetchFromSheet(true));
+    document.getElementById("disconnectBtn").addEventListener("click", ()=>{
+      if(!confirm("Disconnect this device from the shared sheet? You can reconnect any time with the same URL.")) return;
+      disconnectSheet(); closeOverlay();
+    });
+  } else {
+    document.getElementById("connectBtn").addEventListener("click", ()=>{
+      const val = document.getElementById("sheetUrlInput").value.trim();
+      if(!val){ showToast("Paste the web app URL first."); return; }
+      connectToSheet(val);
+      closeOverlay();
+    });
+  }
+
+  const exportBox = document.getElementById("exportBox");
+  exportBox.value = JSON.stringify({exportedAt: new Date().toISOString(), people}, null, 0);
+
+  document.getElementById("copyExportBtn").addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(exportBox.value);
+      showToast("Copied \u2014 paste it wherever you like");
+    }catch(e){
+      exportBox.select();
+      showToast("Select-all in the box and copy manually");
+    }
+  });
+  document.getElementById("downloadExportBtn").addEventListener("click", ()=>{
+    const blob = new Blob([exportBox.value], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "havanje-shenoy-family-tree.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  });
+  document.getElementById("importFileInput").addEventListener("change", (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById("importBox").value = reader.result; };
+    reader.readAsText(file);
+  });
+  document.getElementById("loadImportBtn").addEventListener("click", ()=>{
+    const raw = document.getElementById("importBox").value.trim();
+    if(!raw){ showToast("Paste or choose a file first."); return; }
+    try{
+      const parsed = JSON.parse(raw);
+      const incoming = Array.isArray(parsed) ? parsed : parsed.people;
+      if(!Array.isArray(incoming)) throw new Error("no people array");
+      if(!confirm(`Replace the tree on this device with the imported snapshot (${incoming.length} people)? This can't be undone.`)) return;
+      people = incoming;
+      saveData(); closeOverlay(); render();
+      showToast("Tree updated from import");
+    }catch(e){
+      showToast("That didn't look like a valid export \u2014 check you copied the whole thing.");
+    }
+  });
+}
+
+function childrenOf(id){ return people.filter(p => p.parentId === id); }
+function findPerson(id){ return people.find(p => p.id === id); }
+function allDescendantIds(id){
+  const out = []; const stack = [id];
+  while(stack.length){
+    const cur = stack.pop();
+    for(const c of childrenOf(cur)){ out.push(c.id); stack.push(c.id); }
+  }
+  return out;
+}
+function ancestorChainOf(id){
+  const out = [];
+  let cur = findPerson(id);
+  while(cur && cur.parentId){
+    out.push(cur.parentId);
+    cur = findPerson(cur.parentId);
+  }
+  return out;
+}
+
+/* ---------- layout ---------- */
+function layout(forceOpenIds){
+  const positions = new Map(); // id -> {x,y,depth}
+  let rowCounter = 0;
+
+  function place(node, depth){
+    const kids = childrenOf(node.id);
+    const isOpen = forceOpenIds.has(node.id) || !collapsedIds.has(node.id);
+    const visibleKids = (isOpen && kids.length) ? kids : [];
+    let y;
+    if(visibleKids.length === 0){
+      y = rowCounter * ROW_H + ROW_H/2;
+      rowCounter++;
+    } else {
+      const childYs = visibleKids.map(k => place(k, depth+1));
+      y = (childYs[0] + childYs[childYs.length-1]) / 2;
+    }
+    positions.set(node.id, {x: depth*COL_W + PAD, y: y + PAD, depth, hasKids: kids.length>0, kidsCount: kids.length, collapsed: kids.length>0 && !isOpen});
+    return y;
+  }
+
+  const roots = childrenOf(null);
+  roots.forEach(r => place(r, 0));
+  const maxDepth = Math.max(0, ...Array.from(positions.values()).map(p=>p.depth));
+  const totalHeight = rowCounter * ROW_H + PAD*2;
+  const totalWidth = (maxDepth+1) * COL_W + BOX_W + PAD*2;
+  return {positions, totalWidth, totalHeight};
+}
+
+function personMatchesFilters(p, query, status){
+  const textOk = !query || p.name.toLowerCase().includes(query) || (p.location && p.location.toLowerCase().includes(query));
+  const statusOk = status === "all" || (status === "deceased" ? !!p.deceased : !p.deceased);
+  return textOk && statusOk;
+}
+
+/* ---------- render ---------- */
+function esc(str){
+  return str.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+function render(){
+  const query = searchBox.value.trim().toLowerCase();
+  const status = statusFilter.value;
+  const filterActive = !!query || status !== "all";
+
+  let forceOpenIds = new Set();
+  let matchIds = new Set();
+  if(filterActive){
+    people.forEach(p => {
+      if(personMatchesFilters(p, query, status)){
+        matchIds.add(p.id);
+        ancestorChainOf(p.id).forEach(a => forceOpenIds.add(a));
+      }
+    });
+  }
+
+  const {positions, totalWidth, totalHeight} = layout(forceOpenIds);
+
+  svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
+  svg.setAttribute("width", totalWidth*scale);
+  svg.setAttribute("height", totalHeight*scale);
+  svg.innerHTML = "";
+
+  const connG = document.createElementNS("http://www.w3.org/2000/svg","g");
+  const nodeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+
+  // connectors
+  people.forEach(p => {
+    const pos = positions.get(p.id);
+    if(!pos || pos.collapsed || pos.kidsCount === 0) return;
+    const kids = childrenOf(p.id).map(k => positions.get(k.id)).filter(Boolean);
+    if(kids.length === 0) return;
+    const startX = pos.x + BOX_W;
+    const midX = startX + (COL_W - BOX_W)/2;
+    const minY = Math.min(...kids.map(k=>k.y));
+    const maxY = Math.max(...kids.map(k=>k.y));
+
+    const stub = document.createElementNS("http://www.w3.org/2000/svg","path");
+    stub.setAttribute("class","connector");
+    stub.setAttribute("d", `M ${startX} ${pos.y} H ${midX}`);
+    connG.appendChild(stub);
+
+    if(kids.length > 1){
+      const trunk = document.createElementNS("http://www.w3.org/2000/svg","path");
+      trunk.setAttribute("class","connector");
+      trunk.setAttribute("d", `M ${midX} ${minY} V ${maxY}`);
+      connG.appendChild(trunk);
+    }
+    kids.forEach(k => {
+      const branch = document.createElementNS("http://www.w3.org/2000/svg","path");
+      branch.setAttribute("class","connector");
+      branch.setAttribute("d", `M ${midX} ${k.y} H ${k.x}`);
+      connG.appendChild(branch);
+    });
+  });
+
+  // nodes
+  people.forEach(p => {
+    const pos = positions.get(p.id);
+    if(!pos) return;
+    const isMatch = filterActive && matchIds.has(p.id);
+    const dimmed = filterActive && !isMatch;
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","node-group");
+    g.setAttribute("data-id", p.id);
+    if(dimmed) g.setAttribute("opacity", "0.35");
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute("x", pos.x);
+    rect.setAttribute("y", pos.y - BOX_H/2);
+    rect.setAttribute("width", BOX_W);
+    rect.setAttribute("height", BOX_H);
+    rect.setAttribute("class","node-box" + (p.uncertain ? " uncertain" : "") + (isMatch ? " match" : ""));
+    g.appendChild(rect);
+
+    const hasLocation = !!p.location;
+    const nameY = pos.y + (hasLocation ? -6 : (p.uncertain ? -3 : 4));
+    const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+    text.setAttribute("x", pos.x + BOX_W/2);
+    text.setAttribute("y", nameY);
+    text.setAttribute("text-anchor","middle");
+    text.setAttribute("class","node-text");
+    text.textContent = p.name + (p.deceased ? " \u271d" : "");
+    g.appendChild(text);
+
+    if(hasLocation){
+      const locText = document.createElementNS("http://www.w3.org/2000/svg","text");
+      locText.setAttribute("x", pos.x + BOX_W/2);
+      locText.setAttribute("y", pos.y + 10);
+      locText.setAttribute("text-anchor","middle");
+      locText.setAttribute("class","location-text");
+      locText.textContent = p.location;
+      g.appendChild(locText);
+    } else if(p.uncertain){
+      const flag = document.createElementNS("http://www.w3.org/2000/svg","text");
+      flag.setAttribute("x", pos.x + BOX_W/2);
+      flag.setAttribute("y", pos.y + 12);
+      flag.setAttribute("text-anchor","middle");
+      flag.setAttribute("class","note-flag");
+      flag.textContent = "placement unconfirmed";
+      g.appendChild(flag);
+    }
+
+    g.addEventListener("click", ()=> openEditSheet(p.id));
+    nodeG.appendChild(g);
+
+    if(pos.hasKids){
+      const badgeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+      badgeG.setAttribute("class","toggle-badge");
+      const cx = pos.x + BOX_W, cy = pos.y;
+      const circle = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      circle.setAttribute("cx", cx); circle.setAttribute("cy", cy); circle.setAttribute("r", 9);
+      badgeG.appendChild(circle);
+      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x", cx); label.setAttribute("y", cy+0.5);
+      label.textContent = pos.collapsed ? "+" : "\u2212";
+      badgeG.appendChild(label);
+      badgeG.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        if(collapsedIds.has(p.id)) collapsedIds.delete(p.id); else collapsedIds.add(p.id);
+        saveCollapse();
+        render();
+      });
+      nodeG.appendChild(badgeG);
+    }
+  });
+
+  svg.appendChild(connG);
+  svg.appendChild(nodeG);
+
+  const deceasedCount = people.filter(p=>p.deceased).length;
+  const syncBadge = sheetUrl ? (lastSyncOk === false ? " \u00b7 \u26a0\ufe0f sync issue" : " \u00b7 \ud83d\udd17 synced") : " \u00b7 \ud83d\udcf4 local copy only";
+  statsLine.textContent = `${people.length} people \u00b7 ${deceasedCount} deceased \u00b7 ${people.filter(p=>p.uncertain).length} flagged uncertain` + (filterActive ? ` \u00b7 ${matchIds.size} match${matchIds.size===1?"":"es"}` : "") + syncBadge;
+
+  if(filterActive && matchIds.size){
+    const firstMatchId = Array.from(matchIds)[0];
+    const matchEl = Array.from(nodeG.children).find(g => g.getAttribute && g.getAttribute("data-id") === firstMatchId);
+    if(matchEl){
+      setTimeout(()=> matchEl.scrollIntoView({behavior:"smooth", block:"center", inline:"center"}), 30);
+    }
+  }
+}
+
+/* ---------- zoom ---------- */
+document.getElementById("zoomInBtn").addEventListener("click", ()=>{ scale = Math.min(2, scale+0.15); render(); });
+document.getElementById("zoomOutBtn").addEventListener("click", ()=>{ scale = Math.max(0.35, scale-0.15); render(); });
+
+/* ---------- search ---------- */
+searchBox.addEventListener("input", ()=> render());
+
+/* ---------- expand/collapse all ---------- */
+document.getElementById("expandAllBtn").addEventListener("click", ()=>{ collapsedIds = new Set(); saveCollapse(); render(); });
+document.getElementById("collapseAllBtn").addEventListener("click", ()=>{
+  collapsedIds = new Set(people.filter(p=>childrenOf(p.id).length>0).map(p=>p.id));
+  saveCollapse(); render();
+});
+
+/* ---------- add / edit sheets ---------- */
+function openOverlay(){ overlay.classList.remove("hidden"); }
+function closeOverlay(){ overlay.classList.add("hidden"); sheet.innerHTML = ""; }
+overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closeOverlay(); });
+
+document.getElementById("addRootBtn").addEventListener("click", ()=> openAddSheet(null));
+document.getElementById("syncBtn").addEventListener("click", ()=> openSyncSheet());
+statusFilter.addEventListener("change", ()=> render());
+
+function openAddSheet(parentId){
+  const parent = parentId ? findPerson(parentId) : null;
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>${parent ? "Add child of " + esc(parent.name) : "Start a new branch"}</h2>
+    <div class="hint">${parent ? "This person will be recorded as a child of " + esc(parent.name) + "." : "Use this for a family line not yet connected to the rest of the tree."}</div>
+    <div class="field">
+      <label for="newName">Full name</label>
+      <input type="text" id="newName" placeholder="e.g. Suresh Shenoy" autofocus>
+    </div>
+    <div class="field">
+      <label for="newLocation">Location (optional)</label>
+      <input type="text" id="newLocation" placeholder="e.g. Mangaluru, India">
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="newDeceased">
+      <label for="newDeceased" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Deceased</label>
+    </div>
+    <div class="field">
+      <label for="newNote">Note (optional)</label>
+      <textarea id="newNote" placeholder="Birth year, spouse, anything worth remembering"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="cancelAddBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveAddBtn">Add to tree</button>
+    </div>
+  `;
+  openOverlay();
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+  document.getElementById("cancelAddBtn").addEventListener("click", closeOverlay);
+  document.getElementById("saveAddBtn").addEventListener("click", ()=>{
+    const nameVal = document.getElementById("newName").value.trim();
+    const noteVal = document.getElementById("newNote").value.trim();
+    const locationVal = document.getElementById("newLocation").value.trim();
+    const deceasedVal = document.getElementById("newDeceased").checked;
+    if(!nameVal){ showToast("Enter a name first."); return; }
+    const newPerson = { id: uid(), name: nameVal, parentId: parentId };
+    if(noteVal) newPerson.note = noteVal;
+    if(locationVal) newPerson.location = locationVal;
+    if(deceasedVal) newPerson.deceased = true;
+    people.push(newPerson);
+    if(parentId) collapsedIds.delete(parentId);
+    saveData(); saveCollapse(); closeOverlay(); render();
+    showToast(`Added ${nameVal}`);
+  });
+  setTimeout(()=> document.getElementById("newName").focus(), 50);
+}
+
+function openEditSheet(personId){
+  const person = findPerson(personId);
+  if(!person) return;
+  const kidsCount = childrenOf(personId).length;
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>Edit person</h2>
+    <div class="hint">${kidsCount ? "This person has " + kidsCount + " recorded child" + (kidsCount>1?"ren":"") + "." : "No children recorded yet."}</div>
+    ${person.uncertain ? `<div class="uncertain-note">This placement is flagged as uncertain from the handwritten original${person.note ? ": " + esc(person.note) : "."}</div>` : ""}
+    <div class="field">
+      <label for="editName">Full name</label>
+      <input type="text" id="editName" value="${esc(person.name)}">
+    </div>
+    <div class="field">
+      <label for="parentFilter">Parent &mdash; who this person is a child of</label>
+      <input type="text" id="parentFilter" placeholder="Type to filter the list below&hellip;" autocomplete="off">
+      <select id="editParent" size="6" style="margin-top:6px;"></select>
+      <div class="hint" id="parentMoveWarning" style="margin:6px 0 0;"></div>
+    </div>
+    <div class="field">
+      <label for="editLocation">Location</label>
+      <input type="text" id="editLocation" value="${esc(person.location || "")}" placeholder="e.g. Mangaluru, India">
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="editDeceased" ${person.deceased ? "checked" : ""}>
+      <label for="editDeceased" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Deceased</label>
+    </div>
+    <div class="field">
+      <label for="editNote">Note</label>
+      <textarea id="editNote" placeholder="Birth year, spouse, anything worth remembering">${esc(person.note || "")}</textarea>
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="editUncertain" ${person.uncertain ? "checked" : ""}>
+      <label for="editUncertain" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Still flagged as uncertain / needs confirming</label>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="addChildFromEditBtn">+ Add child</button>
+      <button class="btn btn-primary" id="saveEditBtn">Save</button>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-danger" id="deleteBtn">${kidsCount ? "Delete (and " + kidsCount + " descendant" + (kidsCount>1?"s":"") + ")" : "Delete person"}</button>
+    </div>
+  `;
+  openOverlay();
+
+  // Build the parent options: everyone except this person and their own descendants
+  // (picking one of those would create a loop).
+  const blocked = new Set([personId, ...allDescendantIds(personId)]);
+  const candidates = people
+    .filter(p => !blocked.has(p.id))
+    .map(p => {
+      const parentName = p.parentId ? (findPerson(p.parentId)?.name || "?") : null;
+      return { id: p.id, label: p.name + (parentName ? " \u2014 under " + parentName : " \u2014 top of tree") };
+    })
+    .sort((a,b) => a.label.localeCompare(b.label));
+
+  const parentSelect = document.getElementById("editParent");
+  let selectedParentId = person.parentId || "";
+
+  function renderParentOptions(filterText){
+    const q = (filterText || "").toLowerCase();
+    parentSelect.innerHTML = "";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "\u2014 No parent (start of a new branch) \u2014";
+    if(!q || noneOpt.textContent.toLowerCase().includes(q)){
+      if(selectedParentId === "") noneOpt.selected = true;
+      parentSelect.appendChild(noneOpt);
+    }
+    candidates
+      .filter(c => !q || c.label.toLowerCase().includes(q))
+      .forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.label;
+        if(c.id === selectedParentId) opt.selected = true;
+        parentSelect.appendChild(opt);
+      });
+    updateParentWarning();
+  }
+  function updateParentWarning(){
+    const warn = document.getElementById("parentMoveWarning");
+    const chosen = selectedParentId ? (findPerson(selectedParentId)?.name || "unknown") : "no parent (new branch)";
+    if(selectedParentId !== (person.parentId || "")){
+      warn.textContent = kidsCount
+        ? `Will move to: ${chosen}. Their ${kidsCount} recorded child${kidsCount>1?"ren":""} come along too.`
+        : `Will move to: ${chosen}.`;
+    } else {
+      warn.textContent = `Currently under: ${chosen}.`;
+    }
+  }
+  renderParentOptions("");
+
+  document.getElementById("parentFilter").addEventListener("input", (e)=> renderParentOptions(e.target.value));
+  parentSelect.addEventListener("change", ()=>{
+    selectedParentId = parentSelect.value;
+    updateParentWarning();
+  });
+
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+  document.getElementById("addChildFromEditBtn").addEventListener("click", ()=> openAddSheet(personId));
+  document.getElementById("saveEditBtn").addEventListener("click", ()=>{
+    const nameVal = document.getElementById("editName").value.trim();
+    const noteVal = document.getElementById("editNote").value.trim();
+    const locationVal = document.getElementById("editLocation").value.trim();
+    const deceasedVal = document.getElementById("editDeceased").checked;
+    const uncertainVal = document.getElementById("editUncertain").checked;
+    const newParentId = selectedParentId || null;
+    if(!nameVal){ showToast("Name can't be empty."); return; }
+    person.name = nameVal;
+    if(noteVal) person.note = noteVal; else delete person.note;
+    if(locationVal) person.location = locationVal; else delete person.location;
+    if(deceasedVal) person.deceased = true; else delete person.deceased;
+    if(uncertainVal) person.uncertain = true; else delete person.uncertain;
+    const parentChanged = newParentId !== (person.parentId || null);
+    person.parentId = newParentId;
+    saveData(); closeOverlay(); render();
+    showToast(parentChanged ? "Saved \u2014 moved to new parent" : "Saved");
+  });
+  document.getElementById("deleteBtn").addEventListener("click", ()=>{
+    const desc = allDescendantIds(personId);
+    const confirmMsg = desc.length
+      ? `Delete ${person.name} and ${desc.length} descendant${desc.length>1?"s":""}? This cannot be undone.`
+      : `Delete ${person.name}? This cannot be undone.`;
+    if(!confirm(confirmMsg)) return;
+    const idsToRemove = new Set([personId, ...desc]);
+    people = people.filter(p => !idsToRemove.has(p.id));
+    saveData(); closeOverlay(); render();
+    showToast("Deleted");
+  });
+}
+
+/* ---------- init ---------- */
+loadData();
+</script>
+</body>
+</html>
