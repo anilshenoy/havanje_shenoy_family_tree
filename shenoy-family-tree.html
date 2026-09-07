@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Havanje Shenoy Family Tree</title>
+<style>
+  :root{
+    --parchment: #f2e9d8;
+    --parchment-dark: #e6d8bd;
+    --ink: #2e2418;
+    --ink-soft: #5c4a35;
+    --walnut: #6b3f24;
+    --gold: #a9772f;
+    --gold-light: #d3a05a;
+    --line: #8a744f;
+    --new-mark: #7a3b8f;
+    --danger: #9c3b2c;
+    --uncertain: #b8860b;
+    --female: #a1466b;
+    --female-tint: #fbeef2;
+    --spouse: #2f7a6b;
+    --ancestor: #2c5f8a;
+    --descendant: #3f7d4a;
+    --card-bg: #fbf6ea;
+    --radius: 4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background: var(--parchment);
+    color: var(--ink);
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
+  }
+  header{
+    padding: 14px 16px 10px;
+    border-bottom: 2px solid var(--line);
+    background: linear-gradient(180deg, var(--parchment-dark), var(--parchment));
+    flex: 0 0 auto;
+  }
+  header h1{
+    margin:0;
+    font-size: 1.25rem;
+    letter-spacing: 0.01em;
+    color: var(--walnut);
+    font-weight: 700;
+  }
+  header .subtitle{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  .tips{
+    flex: 0 0 auto;
+    background: var(--parchment-dark);
+    border-bottom: 1px solid var(--line);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .tips summary{
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--walnut);
+    font-weight: 600;
+    list-style: none;
+  }
+  .tips summary::-webkit-details-marker{ display:none; }
+  .tips summary::before{ content: "\u25b8 "; }
+  .tips[open] summary::before{ content: "\u25be "; }
+  .tips ul{
+    margin: 0;
+    padding: 0 16px 12px 34px;
+  }
+  .tips li{ margin-bottom: 4px; }
+  .toolbar{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--parchment);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+    align-items:center;
+  }
+  .toolbar input[type=text]{
+    flex: 1 1 130px;
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    background: var(--card-bg);
+    color: var(--ink);
+  }
+  button{ font-family: Helvetica, Arial, sans-serif; cursor: pointer; }
+  .btn{
+    border: 1px solid var(--walnut);
+    background: var(--card-bg);
+    color: var(--walnut);
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primary{ background: var(--walnut); color: var(--parchment); border-color: var(--walnut); }
+  .zoom-group{ display:flex; gap:2px; }
+  .zoom-group .btn{ padding: 8px 12px; }
+  .stats{
+    padding: 5px 14px;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    flex: 0 0 auto;
+    display:flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .legend{ display:flex; gap:12px; align-items:center; }
+  .legend span{ display:inline-flex; align-items:center; gap:4px; }
+  .swatch{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+  .swatch.uncertain{ border: 1.5px dashed var(--uncertain); background:transparent; }
+  .swatch.normal{ background: var(--card-bg); border: 1px solid var(--line); }
+
+  #canvasWrap{
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    position: relative;
+    background:
+      radial-gradient(circle at 15% 8%, rgba(169,119,47,0.08), transparent 42%),
+      radial-gradient(circle at 92% 85%, rgba(107,63,36,0.07), transparent 48%),
+      var(--parchment);
+    -webkit-overflow-scrolling: touch;
+  }
+  .render-error{
+    margin: 20px;
+    padding: 16px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    background: #fdeceb;
+    color: var(--danger);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .render-error code{
+    display:block;
+    margin-top:8px;
+    padding:8px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  svg{ display:block; }
+  .node-box{
+    fill: var(--card-bg);
+    stroke: var(--walnut);
+    stroke-width: 1.2;
+    rx: 5;
+  }
+  .node-box.female{
+    fill: var(--female-tint);
+    stroke: var(--female);
+  }
+  .node-box.uncertain{
+    stroke: var(--uncertain);
+    stroke-dasharray: 4 2;
+    stroke-width: 1.4;
+  }
+  .node-box.match{
+    fill: #f0dcae;
+    stroke: var(--gold);
+    stroke-width: 2;
+  }
+  .node-group{ cursor: pointer; }
+  .node-group.lineage-dim{ opacity: 0.22; }
+  .node-group.lineage-self .node-box{ stroke: var(--ink); stroke-width: 2.6; }
+  .node-group.lineage-ancestor .node-box{ stroke: var(--ancestor); stroke-width: 2.2; fill: #eaf2f8; }
+  .node-group.lineage-descendant .node-box{ stroke: var(--descendant); stroke-width: 2.2; fill: #edf5ee; }
+  .node-text{
+    font-family: Georgia, serif;
+    font-size: 12.5px;
+    fill: var(--ink);
+    pointer-events: none;
+  }
+  .node-text.female-text{
+    fill: var(--female);
+  }
+  .note-flag{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9px;
+    fill: var(--uncertain);
+    pointer-events: none;
+  }
+  .location-text{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9.5px;
+    font-style: italic;
+    fill: var(--ink-soft);
+    pointer-events: none;
+  }
+  .spouse-tspan{
+    fill: var(--spouse);
+  }
+  .connector{
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1.3;
+  }
+  .toggle-badge circle{
+    fill: var(--card-bg);
+    stroke: var(--gold);
+    stroke-width: 1.2;
+  }
+  .toggle-badge text{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    fill: var(--walnut);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+  }
+  .toggle-badge{ cursor: pointer; }
+
+  .overlay{
+    position: fixed; inset: 0;
+    background: rgba(46,36,24,0.45);
+    display:flex; align-items: flex-end; justify-content: center;
+    z-index: 100;
+  }
+  .overlay.hidden{ display:none; }
+  .sheet{
+    background: var(--parchment);
+    width: 100%; max-width: 480px;
+    border-radius: 14px 14px 0 0;
+    padding: 18px 18px 24px;
+    max-height: 85vh; overflow-y: auto;
+    border-top: 3px solid var(--gold);
+    position:relative;
+  }
+  .sheet h2{ margin: 0 0 4px; font-size: 1.1rem; color: var(--walnut); }
+  .sheet .hint{
+    font-family: Helvetica, Arial, sans-serif; font-size: 0.74rem;
+    color: var(--ink-soft); margin-bottom: 12px; line-height:1.4;
+  }
+  .sheet .uncertain-note{
+    font-family: Helvetica, Arial, sans-serif; font-size: 0.75rem;
+    color: var(--uncertain); background: rgba(184,134,11,0.1);
+    border: 1px dashed var(--uncertain); border-radius: var(--radius);
+    padding: 8px 10px; margin-bottom: 12px; line-height:1.4;
+  }
+  .field{ margin-bottom: 12px; }
+  .field label{
+    display:block; font-family: Helvetica, Arial, sans-serif; font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 4px;
+  }
+  .field input[type=text], .field select, .field textarea{
+    width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--card-bg); font-family: Helvetica, Arial, sans-serif; font-size: 0.92rem; color: var(--ink);
+  }
+  .field select[size]{ font-size: 0.85rem; padding: 4px; }
+  .field select[size] option{ padding: 5px 6px; }
+  .field textarea{ resize: vertical; min-height: 55px; }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; font-family: Helvetica, Arial, sans-serif; font-size:0.82rem; color: var(--ink-soft); }
+  .sheet-actions{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .sheet-actions .btn{ flex: 1 1 auto; text-align:center; }
+  .close-x{ position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 1.3rem; color: var(--ink-soft); }
+
+  .toast{
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--parchment); padding: 9px 16px; border-radius: 20px;
+    font-family: Helvetica, Arial, sans-serif; font-size: 0.8rem; z-index: 200;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .toast.show{ opacity: 1; }
+
+  @media print{
+    header, .toolbar, .stats, .overlay{ display:none !important; }
+    body{ overflow: visible !important; height: auto !important; background: #fff !important; }
+    #canvasWrap{ overflow: visible !important; height: auto !important; position: static !important; background: #fff !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Havanje Shenoy Family Tree</h1>
+</header>
+
+<details class="tips">
+  <summary>How to use this page \u2014 tap for quick tips</summary>
+  <ul>
+    <li>Tap any name to view or edit them, add a child, or reorder them among siblings.</li>
+    <li>Hover a name (press and hold on a phone) to trace their full lineage \u2014 ancestors and descendants light up in different colors.</li>
+    <li>Search by name or place, or filter to Living/Deceased, using the bar below.</li>
+    <li>"Male line only" / "Full family" shows or hides daughters and spouses.</li>
+    <li>The &minus;/+ buttons zoom; the "Sideways" / "Top-down" button switches how the tree is laid out.</li>
+    <li>Print / PDF prints the whole tree, however it's currently filtered.</li>
+  </ul>
+</details>
+
+<div class="toolbar">
+  <input type="text" id="searchBox" placeholder="Find a name or place&hellip;" autocomplete="off">
+  <select id="statusFilter" class="btn" style="padding:8px 6px;">
+    <option value="all">Everyone</option>
+    <option value="living">Living only</option>
+    <option value="deceased">Deceased only</option>
+  </select>
+  <button class="btn" id="genderToggleBtn" title="Toggle whether daughters are shown">Male line only</button>
+  <button class="btn" id="orientationToggleBtn" title="Switch how the tree is laid out"></button>
+  <div class="zoom-group">
+    <button class="btn" id="zoomOutBtn">&minus;</button>
+    <button class="btn" id="zoomInBtn">+</button>
+  </div>
+  <button class="btn" id="expandAllBtn">Expand all</button>
+  <button class="btn" id="collapseAllBtn">Collapse all</button>
+  <button class="btn btn-primary" id="addRootBtn">+ New branch</button>
+  <button class="btn" id="printBtn">Print / PDF</button>
+  <button class="btn" id="syncBtn" style="display:none;">Share / Sync</button>
+</div>
+<div class="stats">
+  <span id="statsLine"></span>
+  <span class="legend">
+    <span><span class="swatch normal"></span>confirmed</span>
+    <span><span class="swatch uncertain"></span>uncertain placement</span>
+    <span><span class="swatch" style="background:var(--female-tint); border:1px solid var(--female);"></span>daughter</span>
+    <span><span class="swatch" style="background:transparent; border:1px solid var(--spouse);"></span>spouse name</span>
+    <span><span class="swatch" style="background:#eaf2f8; border:1.5px solid var(--ancestor);"></span>ancestors (on hover)</span>
+    <span><span class="swatch" style="background:#edf5ee; border:1.5px solid var(--descendant);"></span>descendants (on hover)</span>
+  </span>
+</div>
+
+<div id="canvasWrap">
+  <svg id="treeSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="renderError" class="render-error" style="display:none;"></div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- seed data (corrected transcription) ----------
+   uncertain:true  -> placement/attachment in the tree is not fully confirmed from the photo
+   note            -> extra context worth keeping (annotations seen in the original, etc.)
+*/
+const SEED = [
+  {id:"appayya_sr", name:"Appayya Shenoy", parentId:null, uncertain:true, note:"Top of the chart, above Raya Shenoy's generation. Placed here as father of Narasappa Shenoy \u2014 please confirm whether that's correct, or whether Appayya and Narasappa Shenoy were instead brothers with an unlisted father."},
+  {id:"narasappa", name:"Narasappa Shenoy", parentId:"appayya_sr", uncertain:true, note:"Placed as Appayya Shenoy's son and father of Raya, Nagappa, and Anathayya Shenoy \u2014 please confirm this line."},
+
+  {id:"raya", name:"Raya Shenoy", parentId:"narasappa", note:"A small \u201c3\u201d appears under this name in the original document \u2014 meaning unclear."},
+  {id:"nagappa", name:"Nagappa Shenoy", parentId:"narasappa", note:"Confirmed by family as Raya Shenoy's brother, not his son."},
+  {id:"anathayya", name:"Anathayya Shenoy", parentId:"narasappa", note:"Confirmed by family as Raya Shenoy's brother, not his son."},
+
+  {id:"ramachadra", name:"Ramachadra Shenoy", parentId:"raya", note:"A small \u201c8\u201d appears under this name in the original document \u2014 meaning unclear."},
+  {id:"appayya", name:"Appayya Shenoy", parentId:"raya"},
+  {id:"jagannath", name:"Jagannath Shenoy", parentId:"raya"},
+  {id:"srinivas1", name:"Srinivas Shenoy", parentId:"raya"},
+  {id:"ananthayya", name:"Ananthayya Shenoy", parentId:"raya"},
+
+  // Ramachadra branch
+  {id:"devanna", name:"Devanna Shenoy", parentId:"ramachadra"},
+  {id:"kamalaksha1", name:"Kamalaksha Shenoy", parentId:"ramachadra", note:"A small number (looks like \u201c22\u201d) appears beside this name \u2014 meaning unclear."},
+
+  {id:"ganesh1", name:"Ganesh Shenoy", parentId:"devanna"},
+  {id:"sathish1", name:"Sathish Shenoy", parentId:"devanna", note:"A small number appears beside this name in the original \u2014 meaning unclear."},
+  {id:"vasanth1", name:"Vasanth Shenoy", parentId:"devanna"},
+  {id:"nagesh1", name:"Nagesh Shenoy", parentId:"ganesh1", note:"A small number (looks like \u201c19\u201d) appears beside this name \u2014 meaning unclear."},
+  {id:"sandeep", name:"Sandeep Shenoy", parentId:"sathish1"},
+  {id:"rahul", name:"Rahul Shenoy", parentId:"sathish1"},
+  {id:"aman", name:"Aman Shenoy", parentId:"sandeep"},
+
+  {id:"kishore", name:"Kishore Shenoy", parentId:"kamalaksha1"},
+  {id:"ashok", name:"Ashok Shenoy", parentId:"kamalaksha1"},
+  {id:"pradeep", name:"Pradeep Shenoy", parentId:"kamalaksha1"},
+  {id:"santhosh1", name:"Santhosh Shenoy", parentId:"kamalaksha1"},
+  {id:"prasanth", name:"Prasanth Shenoy", parentId:"kamalaksha1"},
+  {id:"dayananda", name:"Dayananda Shenoy", parentId:"kamalaksha1"},
+  {id:"sadananda", name:"Sadananda Shenoy", parentId:"kamalaksha1"},
+  {id:"kunal", name:"Kunal Shenoy", parentId:"pradeep"},
+  {id:"sanjith", name:"Sanjith Shenoy", parentId:"prasanth"},
+  {id:"krishnadas1", name:"Krishnadas Shenoy", parentId:"dayananda"},
+  {id:"ravindra", name:"Ravindra Shenoy", parentId:"sadananda"},
+  {id:"ramesh_sad", name:"Ramesh Shenoy", parentId:"sadananda"},
+  {id:"vinod", name:"Vinod Shenoy", parentId:"sadananda"},
+  {id:"vasanth2", name:"Vasanth Shenoy", parentId:"sadananda"},
+  {id:"ashesh", name:"Ashesh Shenoy", parentId:"vinod"},
+
+  // Appayya branch
+  {id:"vittal", name:"Vittal Shenoy", parentId:"appayya"},
+  {id:"panduranga", name:"Panduranga Shenoy", parentId:"vittal"},
+  {id:"upendra", name:"Upendra Shenoy", parentId:"vittal"},
+  {id:"devaraya", name:"Devaraya Shenoy", parentId:"vittal"},
+  {id:"padmanabha1", name:"Padmanabha Shenoy", parentId:"vittal", note:"Confirmed by family as a direct son of Vittal Shenoy."},
+  {id:"madhava", name:"Madhava Shenoy", parentId:"vittal", note:"Confirmed by family as a direct son of Vittal Shenoy."},
+
+  {id:"kamalaksha2", name:"Kamalaksha Shenoy", parentId:"panduranga"},
+  {id:"umanath1", name:"Umanath Shenoy", parentId:"panduranga"},
+  {id:"premananda", name:"Premananda Shenoy", parentId:"panduranga"},
+  {id:"prabhakar", name:"Prabhakar Shenoy", parentId:"panduranga"},
+  {id:"rohidas1", name:"Rohidas Shenoy", parentId:"panduranga"},
+  {id:"dinesh1", name:"Dinesh Shenoy", parentId:"panduranga", note:"Underlined in blue ink in the original, unlike the surrounding names \u2014 possibly a later addition or correction."},
+
+  {id:"durgadas", name:"Durgadas Shenoy", parentId:"kamalaksha2"},
+  {id:"saketh", name:"Saketh Shenoy", parentId:"durgadas"},
+  {id:"ruchir", name:"Ruchir Shenoy", parentId:"durgadas"},
+  {id:"madhukar", name:"Madhukar Shenoy", parentId:"premananda"},
+  {id:"manish", name:"Manish Shenoy", parentId:"madhukar"},
+  {id:"janardhan", name:"Janardhan Shenoy", parentId:"rohidas1"},
+  {id:"samith", name:"Samith Shenoy", parentId:"janardhan"},
+  {id:"pradyoth", name:"Pradyoth Shenoy", parentId:"janardhan"},
+  {id:"jayanth", name:"Jayanth Shenoy", parentId:"janardhan"},
+  {id:"ajith", name:"Ajith Shenoy", parentId:"dinesh1"},
+  {id:"ananth1", name:"Ananth Shenoy", parentId:"dinesh1"},
+
+  {id:"chandrakath", name:"Chandrakath Shenoy", parentId:"upendra"},
+  {id:"satendra", name:"Satendra Shenoy", parentId:"upendra"},
+  {id:"suresh1", name:"Suresh Shenoy", parentId:"upendra"},
+  {id:"rajesh1", name:"Rajesh Shenoy", parentId:"chandrakath"},
+  {id:"gurudatta", name:"Gurudatta Shenoy", parentId:"chandrakath"},
+  {id:"sudhir1", name:"Sudhir Shenoy", parentId:"satendra"},
+  {id:"sunil", name:"Sunil Shenoy", parentId:"satendra"},
+  {id:"anil", name:"Anil Shenoy", parentId:"suresh1"},
+  {id:"ajay", name:"Ajay Shenoy", parentId:"suresh1"},
+
+  {id:"ramesh_dev", name:"Ramesh Shenoy", parentId:"devaraya"},
+  {id:"prakash", name:"Prakash Shenoy", parentId:"devaraya"},
+  {id:"jagadish", name:"Jagadish Shenoy", parentId:"devaraya"},
+  {id:"ashwin", name:"Ashwin Shenoy", parentId:"prakash", note:"Confirmed by family as Prakash Shenoy's son."},
+  {id:"gautam", name:"Gautam Shenoy", parentId:"jagadish", note:"Confirmed by family as Jagadish Shenoy's son."},
+  {id:"girish", name:"Girish Shenoy", parentId:"jagadish", note:"Confirmed by family as Jagadish Shenoy's son."},
+
+  // Jagannath branch
+  {id:"keshav", name:"Keshav Shenoy", parentId:"jagannath"},
+  {id:"madhavaraya1", name:"Madhavaraya Shenoy", parentId:"keshav"},
+  {id:"rayappa", name:"Rayappa Shenoy", parentId:"keshav"},
+  {id:"mohan", name:"Mohan Shenoy", parentId:"madhavaraya1", note:"Confirmed by family as Madhavaraya Shenoy's son."},
+  {id:"nagesh2", name:"Nagesh Shenoy", parentId:"madhavaraya1", note:"Confirmed by family as Madhavaraya Shenoy's son."},
+  {id:"sanjay", name:"Sanjay Shenoy", parentId:"rayappa", note:"Confirmed by family as Rayappa Shenoy's son."},
+  {id:"vijay", name:"Vijay Shenoy", parentId:"rayappa", note:"Confirmed by family as Rayappa Shenoy's son."},
+  {id:"manoj", name:"Manoj Shenoy", parentId:"mohan"},
+  {id:"anuj", name:"Anuj Shenoy", parentId:"mohan"},
+  {id:"varun", name:"Varun Shenoy", parentId:"mohan"},
+
+  // Srinivas branch
+  {id:"vasudev", name:"Vasudev Shenoy", parentId:"srinivas1"},
+  {id:"radhakrishna", name:"Radhakrishna Shenoy", parentId:"srinivas1"},
+  {id:"gopal1", name:"Gopal Shenoy", parentId:"srinivas1"},
+  {id:"devadas", name:"Devadas Shenoy", parentId:"vasudev"},
+  {id:"srinivas2", name:"Srinivas Shenoy", parentId:"devadas"},
+  {id:"mohandas", name:"Mohandas Shenoy", parentId:"devadas"},
+  {id:"gokuldas", name:"Gokuldas Shenoy", parentId:"devadas"},
+  {id:"krishnadas2", name:"Krishnadas Shenoy", parentId:"devadas"},
+  {id:"rohidas2", name:"Rohidas Shenoy", parentId:"devadas"},
+  {id:"mitradas", name:"Mitradas Shenoy", parentId:"devadas"},
+  {id:"ravindradas", name:"Ravindradas Shenoy", parentId:"devadas"},
+  {id:"mithun", name:"Mithun Shenoy", parentId:"mohandas"},
+  {id:"mayur", name:"Mayur Shenoy", parentId:"mohandas"},
+  {id:"nagesh3", name:"Nagesh Shenoy", parentId:"mohandas"},
+  {id:"vignesh", name:"Vignesh Shenoy", parentId:"gokuldas"},
+  {id:"rakshit", name:"Rakshit Shenoy", parentId:"rohidas2"},
+  {id:"raghuveer", name:"Raghuveer Shenoy", parentId:"radhakrishna"},
+  {id:"raghuram", name:"Raghuram Shenoy", parentId:"radhakrishna"},
+
+  // Ananthayya branch
+  {id:"raghunath", name:"Raghunath Shenoy", parentId:"ananthayya"},
+  {id:"sanjeeva", name:"Sanjeeva Shenoy", parentId:"ananthayya"},
+  {id:"ramesh_ana", name:"Ramesh Shenoy", parentId:"ananthayya"},
+  {id:"bhaskar1", name:"Bhaskar Shenoy", parentId:"ananthayya"},
+  {id:"dinesh2", name:"Dinesh Shenoy", parentId:"raghunath"},
+  {id:"harish", name:"Harish Shenoy", parentId:"raghunath"},
+  {id:"muralidhar", name:"Muralidhar Shenoy", parentId:"raghunath"},
+  {id:"jayadeva", name:"Jayadeva Shenoy", parentId:"dinesh2"},
+  {id:"srinivas3", name:"Srinivas Shenoy", parentId:"sanjeeva"},
+  {id:"suresh2", name:"Suresh Shenoy", parentId:"sanjeeva"},
+  {id:"sudhir2", name:"Sudhir Shenoy", parentId:"sanjeeva"},
+  {id:"sathish2", name:"Sathish Shenoy", parentId:"sanjeeva"},
+  {id:"nagesh4", name:"Nagesh Shenoy", parentId:"sanjeeva"},
+  {id:"sachin", name:"Sachin Shenoy", parentId:"srinivas3"},
+  {id:"shakthik", name:"Shakthik Shenoy", parentId:"suresh2"},
+  {id:"karthik1", name:"Karthik Shenoy", parentId:"sudhir2"},
+  {id:"shashank", name:"Shashank Shenoy", parentId:"sathish2", note:"Written in purple ink, unlike the rest of the page \u2014 appears to be a recent addition to the family record."},
+
+  // Nagappa branch (corrected: Narayana Shenoy is Nagappa's son, not Raya's)
+  {id:"narayana1", name:"Narayana Shenoy", parentId:"nagappa", note:"Corrected placement: this is a son of Nagappa Shenoy (sibling of Narasimha and Manjunath Shenoy), not a direct son of Raya Shenoy as first transcribed."},
+  {id:"narasimha", name:"Narasimha Shenoy", parentId:"nagappa"},
+  {id:"manjunath", name:"Manjunath Shenoy", parentId:"nagappa"},
+
+  {id:"padmanbha", name:"Padmanbha Shenoy", parentId:"narayana1"},
+  {id:"nagesh5", name:"Nagesh Shenoy", parentId:"narayana1"},
+  {id:"narayana2", name:"Narayana Shenoy", parentId:"padmanbha"},
+  {id:"madhavaraya2", name:"Madhavaraya Shenoy", parentId:"padmanbha"},
+  {id:"gopal2", name:"Gopal Shenoy", parentId:"padmanbha"},
+  {id:"sridhar", name:"Sridhar Shenoy", parentId:"nagesh5"},
+  {id:"shankar", name:"Shankar Shenoy", parentId:"nagesh5"},
+  {id:"bhaskar2", name:"Bhaskar Shenoy", parentId:"nagesh5"},
+  {id:"dinakar", name:"Dinakar Shenoy", parentId:"nagesh5"},
+  {id:"diwakar", name:"Diwakar Shenoy", parentId:"nagesh5"},
+  {id:"padmanabha2", name:"Padmanabha Shenoy", parentId:"narayana2"},
+  {id:"vasanth3", name:"Vasanth Shenoy", parentId:"narayana2"},
+  {id:"karthik2", name:"Karthik Shenoy", parentId:"padmanabha2"},
+  {id:"ghanashyam", name:"Ghanashyam Shenoy", parentId:"madhavaraya2"},
+  {id:"murali", name:"Murali Shenoy", parentId:"madhavaraya2"},
+  {id:"sairanth", name:"Sairanth Shenoy", parentId:"murali"},
+  {id:"srikanth", name:"Srikanth Shenoy", parentId:"sridhar"},
+  {id:"santhosh2", name:"Santhosh Shenoy", parentId:"bhaskar2"},
+
+  {id:"govindraya", name:"Govindraya Shenoy", parentId:"narasimha"},
+  {id:"ganapathy", name:"Ganapathy Shenoy", parentId:"narasimha"},
+  {id:"vaman", name:"Vaman Shenoy", parentId:"narasimha"},
+  {id:"ramanath", name:"Ramanath Shenoy", parentId:"narasimha"},
+  {id:"ramesh_gan", name:"Ramesh Shenoy", parentId:"ganapathy"},
+  {id:"rajesh2", name:"Rajesh Shenoy", parentId:"ramesh_gan"},
+  {id:"rohith", name:"Rohith Shenoy", parentId:"ramesh_gan"},
+  {id:"sarvotham", name:"Sarvotham Shenoy", parentId:"vaman"},
+  {id:"umanath2", name:"Umanath Shenoy", parentId:"vaman"},
+  {id:"venkatesh", name:"Venkatesh Shenoy", parentId:"umanath2"},
+  {id:"ananth2", name:"Ananth Shenoy", parentId:"umanath2"},
+  {id:"ganesh2", name:"Ganesh Shenoy", parentId:"ramanath"},
+  {id:"nagaraj", name:"Nagaraj Shenoy", parentId:"ramanath"},
+  {id:"nagabhushan", name:"Nagabhushan Shenoy", parentId:"nagaraj"},
+  {id:"suraj", name:"Suraj Shenoy", parentId:"nagaraj"},
+  {id:"gopal3", name:"Gopal Shenoy", parentId:"manjunath"},
+  {id:"laxminarayana", name:"Laxminarayana Shenoy", parentId:"gopal3"},
+  {id:"sathish3", name:"Sathish Shenoy", parentId:"gopal3"},
+  {id:"yogesh", name:"Yogesh Shenoy", parentId:"gopal3"},
+  {id:"arun", name:"Arun Shenoy", parentId:"laxminarayana"},
+];
+
+/* ---------- state ---------- */
+let people = [];
+let collapsedIds = new Set();
+let scale = 1;
+let showFemale = false;
+let orientation = "horizontal"; // "horizontal" (left-to-right) or "vertical" (top-to-bottom)
+const GENDER_KEY = "shenoy-tree-show-female";
+const ORIENTATION_KEY = "shenoy-tree-orientation";
+let sheetUrl = null;
+let syncing = false;
+let lastSyncOk = null;
+const STORAGE_KEY = "shenoy-tree-people-local-v1";
+const COLLAPSE_KEY = "shenoy-tree-collapsed-local";
+const SHEET_URL_KEY = "shenoy-tree-sheet-url";
+const POLL_MS = 20000;
+// Baked in so anyone who opens this page connects automatically \u2014 no setup needed.
+const DEFAULT_SHEET_URL = "https://script.google.com/macros/s/AKfycbxtKL8L2VIZ1UYIseMvlYEdyIFauxrZh7XYsdadXmZRBkyQcSWIhotPNBEoO6uD1r4l/exec";
+
+const BOX_W = 176, BOX_H = 40;
+// "sibling spacing" = distance between adjacent brothers/sisters; "generation
+// spacing" = distance between a parent's row and its children's row. Which
+// pixel axis (x or y) each maps to depends on the current orientation.
+const H_SIB_SPACING = 52,  H_GEN_SPACING = 236; // horizontal (left-to-right) tree
+const V_SIB_SPACING = 208, V_GEN_SPACING = 92;  // vertical (top-to-bottom) tree
+const PAD = 40;
+
+const svg = document.getElementById("treeSvg");
+const renderErrorEl = document.getElementById("renderError");
+const canvasWrap = document.getElementById("canvasWrap");
+const statsLine = document.getElementById("statsLine");
+const searchBox = document.getElementById("searchBox");
+const statusFilter = document.getElementById("statusFilter");
+const overlay = document.getElementById("overlay");
+const sheet = document.getElementById("sheet");
+const toastEl = document.getElementById("toast");
+
+function uid(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> toastEl.classList.remove("show"), 2200);
+}
+
+/* This file is self-contained on purpose: everyone opens the same HTML file
+   (emailed, shared via Drive/Dropbox, or hosted anywhere) in any browser, no
+   account needed. It works two ways:
+   - Not connected: each device keeps its own copy in local storage, and
+     Share/Sync moves snapshots around by hand.
+   - Connected to a Google Sheet (via a small Apps Script web app URL,
+     see the "Connect" option in Share/Sync): every device reads and writes
+     the same shared sheet, polling for changes so it stays roughly live. */
+function depthOf(id){
+  let d = 0, cur = findPerson(id);
+  while(cur && cur.parentId){ d++; cur = findPerson(cur.parentId); }
+  return d;
+}
+function defaultCollapseSet(){
+  // Leaves generations 1-4 (depth 0-3) expanded and collapses anyone at the
+  // 4th generation who has children, hiding generation 5 onward by default.
+  const collapsed = new Set();
+  people.forEach(p => {
+    if(depthOf(p.id) === 3 && childrenOf(p.id).length > 0) collapsed.add(p.id);
+  });
+  return collapsed;
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    people = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SEED));
+  }catch(e){
+    people = JSON.parse(JSON.stringify(SEED));
+  }
+  try{
+    const raw2 = localStorage.getItem(COLLAPSE_KEY);
+    collapsedIds = raw2 ? new Set(JSON.parse(raw2)) : defaultCollapseSet();
+  }catch(e){ collapsedIds = defaultCollapseSet(); }
+  try{
+    showFemale = localStorage.getItem(GENDER_KEY) === "1";
+  }catch(e){ showFemale = false; }
+  updateGenderToggleLabel();
+  try{
+    orientation = localStorage.getItem(ORIENTATION_KEY) || "horizontal";
+  }catch(e){ orientation = "horizontal"; }
+  updateOrientationToggleLabel();
+  try{ sheetUrl = localStorage.getItem(SHEET_URL_KEY) || DEFAULT_SHEET_URL || null; }catch(e){ sheetUrl = DEFAULT_SHEET_URL || null; }
+
+  render();
+
+  if(sheetUrl){
+    fetchFromSheet(true);
+    setInterval(()=>{
+      if(overlay.classList.contains("hidden")) fetchFromSheet(false);
+    }, POLL_MS);
+  }
+}
+
+function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(people)); }
+  catch(e){ console.error(e); showToast("Could not save to this device."); }
+  if(sheetUrl) pushToSheet();
+}
+
+function saveCollapse(){
+  try{ localStorage.setItem(COLLAPSE_KEY, JSON.stringify(Array.from(collapsedIds))); }
+  catch(e){ /* non-critical */ }
+}
+
+async function fetchFromSheet(isInitial){
+  if(!sheetUrl) return;
+  syncing = true;
+  try{
+    const res = await fetch(sheetUrl, {method:"GET"});
+    const data = await res.json();
+    if(!Array.isArray(data.people)) throw new Error("Unexpected response shape");
+
+    if(data.people.length === 0 && people.length > 0){
+      if(isInitial){
+        // Brand-new, empty sheet: upload what's on this device as the starting point.
+        await pushToSheet();
+        lastSyncOk = true;
+        showToast("Sheet was empty \u2014 uploaded this device's tree as the starting point");
+      }
+      // A background poll returning empty while we have local data is treated as
+      // a fluke, not a real deletion \u2014 don't let it silently wipe the tree.
+    } else {
+      people = data.people;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(people));
+      lastSyncOk = true;
+      if(isInitial) showToast("Connected \u2014 loaded the shared sheet");
+    }
+    render();
+  }catch(e){
+    console.error("sheet fetch failed", e);
+    lastSyncOk = false;
+    if(isInitial) showToast("Couldn't reach the shared sheet \u2014 showing your last local copy");
+    render();
+  }
+  syncing = false;
+}
+
+async function pushToSheet(){
+  if(!sheetUrl) return;
+  syncing = true;
+  try{
+    await fetch(sheetUrl, {method:"POST", body: JSON.stringify({people})});
+    lastSyncOk = true;
+  }catch(e){
+    console.error("sheet push failed", e);
+    lastSyncOk = false;
+    showToast("Saved on this device, but couldn't reach the shared sheet");
+  }
+  syncing = false;
+  render();
+}
+
+function connectToSheet(url){
+  sheetUrl = url.trim();
+  try{ localStorage.setItem(SHEET_URL_KEY, sheetUrl); }catch(e){ /* non-critical */ }
+  fetchFromSheet(true);
+}
+function disconnectSheet(){
+  sheetUrl = null;
+  try{ localStorage.removeItem(SHEET_URL_KEY); }catch(e){ /* non-critical */ }
+  showToast("Disconnected \u2014 back to this device's own copy");
+  render();
+}
+
+/* ---------- export / import (manual sync) + Google Sheet connect (live sync) ---------- */
+function openSyncSheet(){
+  const connected = !!sheetUrl;
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>Share updates with family</h2>
+
+    ${connected ? `
+      <div class="hint">Connected to a shared Google Sheet. Every device with this URL reads and writes the same data, refreshing about every 20 seconds automatically.</div>
+      <div class="sheet-actions">
+        <button class="btn" id="refreshNowBtn">Refresh now</button>
+        <button class="btn btn-danger" id="disconnectBtn">Disconnect this device</button>
+      </div>
+      <div class="hint" style="margin-top:14px;">Sheet URL on this device (for reference):</div>
+      <textarea readonly style="min-height:50px; font-family:monospace; font-size:0.7rem;">${esc(sheetUrl)}</textarea>
+    ` : `
+      <div class="hint">Two ways to keep everyone's copy in sync:</div>
+      <div class="field" style="margin-top:10px;">
+        <label for="sheetUrlInput">Connect to a shared Google Sheet (live-ish sync, everyone edits the same data)</label>
+        <input type="text" id="sheetUrlInput" placeholder="Paste the Apps Script web app URL">
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-primary" id="connectBtn">Connect</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">Don't have one set up yet? Ask whoever built this page for the Apps Script setup steps \u2014 it takes about five minutes, one time.</div>
+    `}
+
+    <div class="field" style="margin-top:20px; border-top:1px dashed var(--line); padding-top:14px;">
+      <label>Export &mdash; copy this and send it, or download it as a file (also works as a backup)</label>
+      <textarea id="exportBox" readonly style="min-height:110px; font-family: monospace; font-size:0.75rem;"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="copyExportBtn">Copy text</button>
+      <button class="btn" id="downloadExportBtn">Download file</button>
+    </div>
+    <div class="field" style="margin-top:18px;">
+      <label for="importBox">Import &mdash; paste a snapshot someone sent you</label>
+      <textarea id="importBox" placeholder="Paste the exported text here"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <label class="btn" style="text-align:center; margin:0;">
+        Choose a file instead
+        <input type="file" id="importFileInput" accept="application/json,.json,.txt" style="display:none;">
+      </label>
+      <button class="btn btn-primary" id="loadImportBtn">Replace tree with this</button>
+    </div>
+  `;
+  openOverlay();
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+
+  if(connected){
+    document.getElementById("refreshNowBtn").addEventListener("click", ()=> fetchFromSheet(true));
+    document.getElementById("disconnectBtn").addEventListener("click", ()=>{
+      if(!confirm("Disconnect this device from the shared sheet? You can reconnect any time with the same URL.")) return;
+      disconnectSheet(); closeOverlay();
+    });
+  } else {
+    document.getElementById("connectBtn").addEventListener("click", ()=>{
+      const val = document.getElementById("sheetUrlInput").value.trim();
+      if(!val){ showToast("Paste the web app URL first."); return; }
+      connectToSheet(val);
+      closeOverlay();
+    });
+  }
+
+  const exportBox = document.getElementById("exportBox");
+  exportBox.value = JSON.stringify({exportedAt: new Date().toISOString(), people}, null, 0);
+
+  document.getElementById("copyExportBtn").addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(exportBox.value);
+      showToast("Copied \u2014 paste it wherever you like");
+    }catch(e){
+      exportBox.select();
+      showToast("Select-all in the box and copy manually");
+    }
+  });
+  document.getElementById("downloadExportBtn").addEventListener("click", ()=>{
+    const blob = new Blob([exportBox.value], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "havanje-shenoy-family-tree.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  });
+  document.getElementById("importFileInput").addEventListener("change", (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById("importBox").value = reader.result; };
+    reader.readAsText(file);
+  });
+  document.getElementById("loadImportBtn").addEventListener("click", ()=>{
+    const raw = document.getElementById("importBox").value.trim();
+    if(!raw){ showToast("Paste or choose a file first."); return; }
+    try{
+      const parsed = JSON.parse(raw);
+      const incoming = Array.isArray(parsed) ? parsed : parsed.people;
+      if(!Array.isArray(incoming)) throw new Error("no people array");
+      if(!confirm(`Replace the tree on this device with the imported snapshot (${incoming.length} people)? This can't be undone.`)) return;
+      people = incoming;
+      saveData(); closeOverlay(); render();
+      showToast("Tree updated from import");
+    }catch(e){
+      showToast("That didn't look like a valid export \u2014 check you copied the whole thing.");
+    }
+  });
+}
+
+function childrenOf(id){ return people.filter(p => p.parentId === id); }
+function findPerson(id){ return people.find(p => p.id === id); }
+function moveSibling(personId, direction){
+  const person = findPerson(personId);
+  if(!person) return false;
+  const siblings = childrenOf(person.parentId);
+  const idx = siblings.findIndex(s => s.id === personId);
+  const swapIdx = idx + direction;
+  if(swapIdx < 0 || swapIdx >= siblings.length) return false;
+  const other = siblings[swapIdx];
+  const iA = people.findIndex(p => p.id === person.id);
+  const iB = people.findIndex(p => p.id === other.id);
+  [people[iA], people[iB]] = [people[iB], people[iA]];
+  saveData(); render();
+  return true;
+}
+function allDescendantIds(id){
+  const out = []; const stack = [id];
+  while(stack.length){
+    const cur = stack.pop();
+    for(const c of childrenOf(cur)){ out.push(c.id); stack.push(c.id); }
+  }
+  return out;
+}
+function ancestorChainOf(id){
+  const out = [];
+  let cur = findPerson(id);
+  while(cur && cur.parentId){
+    out.push(cur.parentId);
+    cur = findPerson(cur.parentId);
+  }
+  return out;
+}
+
+function applyLineageHighlight(hoverId){
+  const ancestors = new Set(ancestorChainOf(hoverId));
+  const descendants = new Set(allDescendantIds(hoverId));
+  document.querySelectorAll(".node-group").forEach(g => {
+    const id = g.getAttribute("data-id");
+    g.classList.remove("lineage-ancestor","lineage-descendant","lineage-self","lineage-dim");
+    if(!id) return;
+    if(id === hoverId) g.classList.add("lineage-self");
+    else if(ancestors.has(id)) g.classList.add("lineage-ancestor");
+    else if(descendants.has(id)) g.classList.add("lineage-descendant");
+    else g.classList.add("lineage-dim");
+  });
+}
+function clearLineageHighlight(){
+  document.querySelectorAll(".node-group").forEach(g => {
+    g.classList.remove("lineage-ancestor","lineage-descendant","lineage-self","lineage-dim");
+  });
+}
+
+/* ---------- layout ---------- */
+function visibleKidsOf(id){
+  const kids = childrenOf(id);
+  return showFemale ? kids : kids.filter(k => (k.gender || "M") !== "F");
+}
+
+function layout(forceOpenIds){
+  const positions = new Map(); // id -> {x,y,depth,...}
+  const visiting = new Set(); // guards against a bad parentId cycle crashing the layout
+  let leafCounter = 0;
+  const sibSpacing = orientation === "vertical" ? V_SIB_SPACING : H_SIB_SPACING;
+  const genSpacing = orientation === "vertical" ? V_GEN_SPACING : H_GEN_SPACING;
+
+  function place(node, depth){
+    if(visiting.has(node.id) || depth > 60){
+      // Broken data (a parentId cycle, or an implausibly deep chain) \u2014
+      // render this node as a flagged leaf instead of recursing forever.
+      const sib = leafCounter * sibSpacing + sibSpacing/2;
+      leafCounter++;
+      positions.set(node.id, {depth, sib, hasKids: false, kidsCount: 0, collapsed: false, brokenCycle: true});
+      return sib;
+    }
+    visiting.add(node.id);
+    const kids = visibleKidsOf(node.id);
+    const isOpen = forceOpenIds.has(node.id) || !collapsedIds.has(node.id);
+    const visibleKids = (isOpen && kids.length) ? kids : [];
+    let sib;
+    if(visibleKids.length === 0){
+      sib = leafCounter * sibSpacing + sibSpacing/2;
+      leafCounter++;
+    } else {
+      const childSibs = visibleKids.map(k => place(k, depth+1));
+      sib = (childSibs[0] + childSibs[childSibs.length-1]) / 2;
+    }
+    positions.set(node.id, {depth, sib, hasKids: kids.length>0, kidsCount: kids.length, collapsed: kids.length>0 && !isOpen});
+    visiting.delete(node.id);
+    return sib;
+  }
+
+  const roots = visibleKidsOf(null);
+  roots.forEach(r => place(r, 0));
+  const maxDepth = Math.max(0, ...Array.from(positions.values()).map(p=>p.depth));
+
+  let totalWidth, totalHeight;
+  if(orientation === "vertical"){
+    positions.forEach(pos => { pos.x = pos.sib + PAD; pos.y = pos.depth*genSpacing + PAD; });
+    totalWidth = leafCounter*sibSpacing + PAD*2;
+    totalHeight = (maxDepth+1)*genSpacing + BOX_H + PAD*2;
+  } else {
+    positions.forEach(pos => { pos.x = pos.depth*genSpacing + PAD; pos.y = pos.sib + PAD; });
+    totalWidth = (maxDepth+1)*genSpacing + BOX_W + PAD*2;
+    totalHeight = leafCounter*sibSpacing + PAD*2;
+  }
+  return {positions, totalWidth, totalHeight};
+}
+
+function personMatchesFilters(p, query, status){
+  const textOk = !query || p.name.toLowerCase().includes(query) || (p.location && p.location.toLowerCase().includes(query));
+  const statusOk = status === "all" || (status === "deceased" ? !!p.deceased : !p.deceased);
+  return textOk && statusOk;
+}
+
+/* ---------- render ---------- */
+function esc(str){
+  return str.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+function render(){
+  try{
+    renderInner();
+    svg.style.display = "";
+    renderErrorEl.style.display = "none";
+  }catch(err){
+    console.error("Render failed:", err);
+    svg.style.display = "none";
+    renderErrorEl.style.display = "";
+    renderErrorEl.innerHTML = `
+      <strong>Something went wrong displaying the tree.</strong>
+      This is a bug, not lost data \u2014 nothing in the shared sheet has been changed.
+      Try reloading the page. If it keeps happening, share this message with whoever maintains the page:
+      <code>${esc(String(err && err.message || err))}</code>
+    `;
+  }
+}
+
+function renderInner(){
+  const query = searchBox.value.trim().toLowerCase();
+  const status = statusFilter.value;
+  const filterActive = !!query || status !== "all";
+
+  let forceOpenIds = new Set();
+  let matchIds = new Set();
+  if(filterActive){
+    people.forEach(p => {
+      if(personMatchesFilters(p, query, status)){
+        matchIds.add(p.id);
+        ancestorChainOf(p.id).forEach(a => forceOpenIds.add(a));
+      }
+    });
+  }
+
+  const {positions, totalWidth, totalHeight} = layout(forceOpenIds);
+
+  svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
+  svg.setAttribute("width", totalWidth*scale);
+  svg.setAttribute("height", totalHeight*scale);
+  svg.innerHTML = "";
+
+  const connG = document.createElementNS("http://www.w3.org/2000/svg","g");
+  const nodeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+
+  // connectors
+  const genSpacingNow = orientation === "vertical" ? V_GEN_SPACING : H_GEN_SPACING;
+  people.forEach(p => {
+    const pos = positions.get(p.id);
+    if(!pos || pos.collapsed || pos.kidsCount === 0) return;
+    const kids = childrenOf(p.id).map(k => positions.get(k.id)).filter(Boolean);
+    if(kids.length === 0) return;
+
+    if(orientation === "vertical"){
+      const parentCx = pos.x + BOX_W/2;
+      const startY = pos.y + BOX_H/2;
+      const midY = startY + (genSpacingNow - BOX_H)/2;
+      const kidCx = kids.map(k => k.x + BOX_W/2);
+      const minCx = Math.min(...kidCx), maxCx = Math.max(...kidCx);
+
+      const stub = document.createElementNS("http://www.w3.org/2000/svg","path");
+      stub.setAttribute("class","connector");
+      stub.setAttribute("d", `M ${parentCx} ${startY} V ${midY}`);
+      connG.appendChild(stub);
+
+      if(kids.length > 1){
+        const trunk = document.createElementNS("http://www.w3.org/2000/svg","path");
+        trunk.setAttribute("class","connector");
+        trunk.setAttribute("d", `M ${minCx} ${midY} H ${maxCx}`);
+        connG.appendChild(trunk);
+      }
+      kids.forEach((k,i) => {
+        const branch = document.createElementNS("http://www.w3.org/2000/svg","path");
+        branch.setAttribute("class","connector");
+        branch.setAttribute("d", `M ${kidCx[i]} ${midY} V ${k.y - BOX_H/2}`);
+        connG.appendChild(branch);
+      });
+    } else {
+      const startX = pos.x + BOX_W;
+      const midX = startX + (genSpacingNow - BOX_W)/2;
+      const minY = Math.min(...kids.map(k=>k.y));
+      const maxY = Math.max(...kids.map(k=>k.y));
+
+      const stub = document.createElementNS("http://www.w3.org/2000/svg","path");
+      stub.setAttribute("class","connector");
+      stub.setAttribute("d", `M ${startX} ${pos.y} H ${midX}`);
+      connG.appendChild(stub);
+
+      if(kids.length > 1){
+        const trunk = document.createElementNS("http://www.w3.org/2000/svg","path");
+        trunk.setAttribute("class","connector");
+        trunk.setAttribute("d", `M ${midX} ${minY} V ${maxY}`);
+        connG.appendChild(trunk);
+      }
+      kids.forEach(k => {
+        const branch = document.createElementNS("http://www.w3.org/2000/svg","path");
+        branch.setAttribute("class","connector");
+        branch.setAttribute("d", `M ${midX} ${k.y} H ${k.x}`);
+        connG.appendChild(branch);
+      });
+    }
+  });
+
+  // nodes
+  people.forEach(p => {
+    const pos = positions.get(p.id);
+    if(!pos) return;
+    const isMatch = filterActive && matchIds.has(p.id);
+    const dimmed = filterActive && !isMatch;
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","node-group");
+    g.setAttribute("data-id", p.id);
+    if(dimmed) g.setAttribute("opacity", "0.35");
+
+    const isFemale = (p.gender||"M") === "F";
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute("x", pos.x);
+    rect.setAttribute("y", pos.y - BOX_H/2);
+    rect.setAttribute("width", BOX_W);
+    rect.setAttribute("height", BOX_H);
+    rect.setAttribute("class","node-box" + (isFemale ? " female" : "") + (p.uncertain ? " uncertain" : "") + (isMatch ? " match" : ""));
+    g.appendChild(rect);
+
+    const hasLocation = !!p.location;
+    const hasSpouse = !!p.spouse && showFemale;
+    const hasSubtitle = hasLocation || hasSpouse;
+    const nameY = pos.y + (hasSubtitle ? -6 : (p.uncertain ? -3 : 4));
+    const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+    text.setAttribute("x", pos.x + BOX_W/2);
+    text.setAttribute("y", nameY);
+    text.setAttribute("text-anchor","middle");
+    text.setAttribute("class","node-text" + (isFemale ? " female-text" : ""));
+    text.textContent = p.name + (isFemale ? " \u2640" : "") + (p.deceased ? " \u271d" : "");
+    g.appendChild(text);
+
+    if(hasSubtitle){
+      const locText = document.createElementNS("http://www.w3.org/2000/svg","text");
+      locText.setAttribute("x", pos.x + BOX_W/2);
+      locText.setAttribute("y", pos.y + 10);
+      locText.setAttribute("text-anchor","middle");
+      locText.setAttribute("class","location-text");
+      if(hasSpouse){
+        const spouseTspan = document.createElementNS("http://www.w3.org/2000/svg","tspan");
+        spouseTspan.setAttribute("class","spouse-tspan");
+        spouseTspan.textContent = "m. " + p.spouse;
+        locText.appendChild(spouseTspan);
+      }
+      if(hasSpouse && hasLocation){
+        const sep = document.createElementNS("http://www.w3.org/2000/svg","tspan");
+        sep.textContent = " \u00b7 ";
+        locText.appendChild(sep);
+      }
+      if(hasLocation){
+        const locTspan = document.createElementNS("http://www.w3.org/2000/svg","tspan");
+        locTspan.textContent = p.location;
+        locText.appendChild(locTspan);
+      }
+      g.appendChild(locText);
+    } else if(p.uncertain){
+      const flag = document.createElementNS("http://www.w3.org/2000/svg","text");
+      flag.setAttribute("x", pos.x + BOX_W/2);
+      flag.setAttribute("y", pos.y + 12);
+      flag.setAttribute("text-anchor","middle");
+      flag.setAttribute("class","note-flag");
+      flag.textContent = "placement unconfirmed";
+      g.appendChild(flag);
+    }
+
+    g.addEventListener("click", ()=> openEditSheet(p.id));
+    g.addEventListener("mouseenter", ()=> applyLineageHighlight(p.id));
+    g.addEventListener("mouseleave", clearLineageHighlight);
+    g.addEventListener("touchstart", ()=> applyLineageHighlight(p.id), {passive:true});
+    g.addEventListener("touchend", clearLineageHighlight);
+    nodeG.appendChild(g);
+
+    if(pos.hasKids){
+      const badgeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+      badgeG.setAttribute("class","toggle-badge");
+      const cx = pos.x + BOX_W, cy = pos.y;
+      const circle = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      circle.setAttribute("cx", cx); circle.setAttribute("cy", cy); circle.setAttribute("r", 9);
+      badgeG.appendChild(circle);
+      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x", cx); label.setAttribute("y", cy+0.5);
+      label.textContent = pos.collapsed ? "+" : "\u2212";
+      badgeG.appendChild(label);
+      badgeG.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        if(collapsedIds.has(p.id)) collapsedIds.delete(p.id); else collapsedIds.add(p.id);
+        saveCollapse();
+        render();
+      });
+      nodeG.appendChild(badgeG);
+    }
+  });
+
+  svg.appendChild(connG);
+  svg.appendChild(nodeG);
+
+  const deceasedCount = people.filter(p=>p.deceased).length;
+  const syncBadge = sheetUrl ? (lastSyncOk === false ? " \u00b7 \u26a0\ufe0f sync issue" : " \u00b7 \ud83d\udd17 synced") : " \u00b7 \ud83d\udcf4 local copy only";
+  statsLine.textContent = `${people.length} people \u00b7 ${deceasedCount} deceased \u00b7 ${people.filter(p=>p.uncertain).length} flagged uncertain` + (filterActive ? ` \u00b7 ${matchIds.size} match${matchIds.size===1?"":"es"}` : "") + syncBadge;
+
+  if(filterActive && matchIds.size){
+    const firstMatchId = Array.from(matchIds)[0];
+    const matchEl = Array.from(nodeG.children).find(g => g.getAttribute && g.getAttribute("data-id") === firstMatchId);
+    if(matchEl){
+      setTimeout(()=> matchEl.scrollIntoView({behavior:"smooth", block:"center", inline:"center"}), 30);
+    }
+  }
+}
+
+/* ---------- zoom ---------- */
+document.getElementById("zoomInBtn").addEventListener("click", ()=>{ scale = Math.min(2, scale+0.15); render(); });
+document.getElementById("zoomOutBtn").addEventListener("click", ()=>{ scale = Math.max(0.35, scale-0.15); render(); });
+
+/* ---------- search ---------- */
+searchBox.addEventListener("input", ()=> render());
+
+/* ---------- expand/collapse all ---------- */
+document.getElementById("expandAllBtn").addEventListener("click", ()=>{ collapsedIds = new Set(); saveCollapse(); render(); });
+document.getElementById("collapseAllBtn").addEventListener("click", ()=>{
+  collapsedIds = new Set(people.filter(p=>childrenOf(p.id).length>0).map(p=>p.id));
+  saveCollapse(); render();
+});
+
+/* ---------- add / edit sheets ---------- */
+function openOverlay(){ overlay.classList.remove("hidden"); }
+function closeOverlay(){ overlay.classList.add("hidden"); sheet.innerHTML = ""; }
+overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closeOverlay(); });
+
+document.getElementById("addRootBtn").addEventListener("click", ()=> openAddSheet(null));
+document.getElementById("syncBtn").addEventListener("click", ()=> openSyncSheet());
+document.getElementById("printBtn").addEventListener("click", ()=> openPrintSheet());
+statusFilter.addEventListener("change", ()=> render());
+
+// Share/Sync is hidden from the family by default \u2014 only visible via a
+// private link (add ?admin=1 to the page's URL) so people don't stumble
+// into export/import/connect controls they don't need.
+try{
+  if(new URLSearchParams(window.location.search).get("admin") === "1"){
+    document.getElementById("syncBtn").style.display = "";
+  }
+}catch(e){ /* non-critical */ }
+
+function updateGenderToggleLabel(){
+  const btn = document.getElementById("genderToggleBtn");
+  btn.textContent = showFemale ? "Full family" : "Male line only";
+  btn.title = showFemale
+    ? "Showing sons and daughters. Tap to show the traditional male line only."
+    : "Showing the traditional male line only. Tap to include daughters too.";
+}
+document.getElementById("genderToggleBtn").addEventListener("click", ()=>{
+  showFemale = !showFemale;
+  try{ localStorage.setItem(GENDER_KEY, showFemale ? "1" : "0"); }catch(e){ /* non-critical */ }
+  updateGenderToggleLabel();
+  render();
+});
+
+function updateOrientationToggleLabel(){
+  const btn = document.getElementById("orientationToggleBtn");
+  btn.textContent = orientation === "vertical" ? "\u2193 Top-down" : "\u2192 Sideways";
+  btn.title = orientation === "vertical"
+    ? "Showing a top-to-bottom tree. Tap to switch to left-to-right."
+    : "Showing a left-to-right tree. Tap to switch to top-to-bottom.";
+}
+document.getElementById("orientationToggleBtn").addEventListener("click", ()=>{
+  orientation = orientation === "vertical" ? "horizontal" : "vertical";
+  try{ localStorage.setItem(ORIENTATION_KEY, orientation); }catch(e){ /* non-critical */ }
+  updateOrientationToggleLabel();
+  render();
+});
+
+function openAddSheet(parentId){
+  const parent = parentId ? findPerson(parentId) : null;
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>${parent ? "Add child of " + esc(parent.name) : "Start a new branch"}</h2>
+    <div class="hint">${parent ? "This person will be recorded as a child of " + esc(parent.name) + "." : "Use this for a family line not yet connected to the rest of the tree."}</div>
+    <div class="field">
+      <label for="newName">Full name</label>
+      <input type="text" id="newName" placeholder="e.g. Suresh Shenoy" autofocus>
+    </div>
+    <div class="field">
+      <label>This child is a</label>
+      <div class="checkbox-row" style="gap:16px;">
+        <label style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.85rem;"><input type="radio" name="newGender" value="M" checked> Son</label>
+        <label style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.85rem;"><input type="radio" name="newGender" value="F"> Daughter</label>
+      </div>
+    </div>
+    <div class="field">
+      <label for="newSpouse">Spouse (optional)</label>
+      <input type="text" id="newSpouse" placeholder="e.g. Lakshmi Shenoy">
+    </div>
+    <div class="field">
+      <label for="newLocation">Location (optional)</label>
+      <input type="text" id="newLocation" placeholder="e.g. Mangaluru, India">
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="newDeceased">
+      <label for="newDeceased" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Deceased</label>
+    </div>
+    <div class="field">
+      <label for="newNote">Note (optional)</label>
+      <textarea id="newNote" placeholder="Birth year, anything worth remembering"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="cancelAddBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveAddBtn">Add to tree</button>
+    </div>
+  `;
+  openOverlay();
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+  document.getElementById("cancelAddBtn").addEventListener("click", closeOverlay);
+  document.getElementById("saveAddBtn").addEventListener("click", ()=>{
+    const nameVal = document.getElementById("newName").value.trim();
+    const noteVal = document.getElementById("newNote").value.trim();
+    const locationVal = document.getElementById("newLocation").value.trim();
+    const spouseVal = document.getElementById("newSpouse").value.trim();
+    const deceasedVal = document.getElementById("newDeceased").checked;
+    const genderVal = document.querySelector('input[name="newGender"]:checked').value;
+    if(!nameVal){ showToast("Enter a name first."); return; }
+    const newPerson = { id: uid(), name: nameVal, parentId: parentId };
+    if(genderVal === "F") newPerson.gender = "F";
+    if(noteVal) newPerson.note = noteVal;
+    if(locationVal) newPerson.location = locationVal;
+    if(spouseVal) newPerson.spouse = spouseVal;
+    if(deceasedVal) newPerson.deceased = true;
+    people.push(newPerson);
+    if(parentId) collapsedIds.delete(parentId);
+    if(genderVal === "F" && !showFemale){
+      showToast(`Added ${nameVal} \u2014 switch to "Full family" to see her in the tree`);
+    } else {
+      showToast(`Added ${nameVal}`);
+    }
+    saveData(); saveCollapse(); closeOverlay(); render();
+  });
+  setTimeout(()=> document.getElementById("newName").focus(), 50);
+}
+
+function openEditSheet(personId){
+  const person = findPerson(personId);
+  if(!person) return;
+  const kidsCount = childrenOf(personId).length;
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>Edit person</h2>
+    <div class="hint">${kidsCount ? "This person has " + kidsCount + " recorded child" + (kidsCount>1?"ren":"") + "." : "No children recorded yet."}</div>
+    ${person.uncertain ? `<div class="uncertain-note">This placement is flagged as uncertain from the handwritten original${person.note ? ": " + esc(person.note) : "."}</div>` : ""}
+    <div class="field" id="siblingOrderField"></div>
+    <div class="field">
+      <label for="editName">Full name</label>
+      <input type="text" id="editName" value="${esc(person.name)}">
+    </div>
+    <div class="field">
+      <label>Gender</label>
+      <div class="checkbox-row" style="gap:16px;">
+        <label style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.85rem;"><input type="radio" name="editGender" value="M" ${((person.gender||"M")==="M") ? "checked" : ""}> Male</label>
+        <label style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.85rem;"><input type="radio" name="editGender" value="F" ${(person.gender==="F") ? "checked" : ""}> Female</label>
+      </div>
+    </div>
+    <div class="field">
+      <label for="editSpouse">Spouse</label>
+      <input type="text" id="editSpouse" value="${esc(person.spouse || "")}" placeholder="e.g. Lakshmi Shenoy">
+    </div>
+    <div class="field">
+      <label for="parentFilter">Parent &mdash; who this person is a child of</label>
+      <input type="text" id="parentFilter" placeholder="Type to filter the list below&hellip;" autocomplete="off">
+      <select id="editParent" size="6" style="margin-top:6px;"></select>
+      <div class="hint" id="parentMoveWarning" style="margin:6px 0 0;"></div>
+    </div>
+    <div class="field">
+      <label for="editLocation">Location</label>
+      <input type="text" id="editLocation" value="${esc(person.location || "")}" placeholder="e.g. Mangaluru, India">
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="editDeceased" ${person.deceased ? "checked" : ""}>
+      <label for="editDeceased" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Deceased</label>
+    </div>
+    <div class="field">
+      <label for="editNote">Note</label>
+      <textarea id="editNote" placeholder="Birth year, spouse, anything worth remembering">${esc(person.note || "")}</textarea>
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="editUncertain" ${person.uncertain ? "checked" : ""}>
+      <label for="editUncertain" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Still flagged as uncertain / needs confirming</label>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="addChildFromEditBtn">+ Add child</button>
+      <button class="btn btn-primary" id="saveEditBtn">Save</button>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-danger" id="deleteBtn">${kidsCount ? "Delete (and " + kidsCount + " descendant" + (kidsCount>1?"s":"") + ")" : "Delete person"}</button>
+    </div>
+  `;
+  openOverlay();
+
+  function ordinal(n){
+    const s = ["th","st","nd","rd"], v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+  }
+  function renderSiblingOrder(){
+    const siblings = childrenOf(person.parentId);
+    const idx = siblings.findIndex(s => s.id === personId);
+    const total = siblings.length;
+    const field = document.getElementById("siblingOrderField");
+    if(total <= 1){
+      field.innerHTML = `<div class="hint" style="margin:0;">Only child recorded under this parent \u2014 nothing to order.</div>`;
+      return;
+    }
+    field.innerHTML = `
+      <label>Birth order among siblings</label>
+      <div class="checkbox-row" style="gap:10px; justify-content:space-between;">
+        <button class="btn" id="moveUpBtn" ${idx===0 ? "disabled" : ""} style="flex:0 0 auto;">&uarr; Older</button>
+        <span style="font-family:Helvetica,Arial,sans-serif; font-size:0.85rem; color:var(--ink-soft);">${ordinal(idx+1)} of ${total}</span>
+        <button class="btn" id="moveDownBtn" ${idx===total-1 ? "disabled" : ""} style="flex:0 0 auto;">&darr; Younger</button>
+      </div>
+      <div class="hint" style="margin:6px 0 0;">Top-to-bottom position in the tree reflects this order \u2014 move someone up to show them as older.</div>
+    `;
+    const upBtn = document.getElementById("moveUpBtn");
+    const downBtn = document.getElementById("moveDownBtn");
+    if(upBtn) upBtn.addEventListener("click", ()=>{ moveSibling(personId, -1); renderSiblingOrder(); });
+    if(downBtn) downBtn.addEventListener("click", ()=>{ moveSibling(personId, 1); renderSiblingOrder(); });
+  }
+  renderSiblingOrder();
+
+  // Build the parent options: everyone except this person and their own descendants
+  // (picking one of those would create a loop).
+  const blocked = new Set([personId, ...allDescendantIds(personId)]);
+  const candidates = people
+    .filter(p => !blocked.has(p.id))
+    .map(p => {
+      const parentName = p.parentId ? (findPerson(p.parentId)?.name || "?") : null;
+      return { id: p.id, label: p.name + (parentName ? " \u2014 under " + parentName : " \u2014 top of tree") };
+    })
+    .sort((a,b) => a.label.localeCompare(b.label));
+
+  const parentSelect = document.getElementById("editParent");
+  let selectedParentId = person.parentId || "";
+
+  function renderParentOptions(filterText){
+    const q = (filterText || "").toLowerCase();
+    parentSelect.innerHTML = "";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "\u2014 No parent (start of a new branch) \u2014";
+    if(!q || noneOpt.textContent.toLowerCase().includes(q)){
+      if(selectedParentId === "") noneOpt.selected = true;
+      parentSelect.appendChild(noneOpt);
+    }
+    candidates
+      .filter(c => !q || c.label.toLowerCase().includes(q))
+      .forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.label;
+        if(c.id === selectedParentId) opt.selected = true;
+        parentSelect.appendChild(opt);
+      });
+    updateParentWarning();
+  }
+  function updateParentWarning(){
+    const warn = document.getElementById("parentMoveWarning");
+    const chosen = selectedParentId ? (findPerson(selectedParentId)?.name || "unknown") : "no parent (new branch)";
+    if(selectedParentId !== (person.parentId || "")){
+      warn.textContent = kidsCount
+        ? `Will move to: ${chosen}. Their ${kidsCount} recorded child${kidsCount>1?"ren":""} come along too.`
+        : `Will move to: ${chosen}.`;
+    } else {
+      warn.textContent = `Currently under: ${chosen}.`;
+    }
+  }
+  renderParentOptions("");
+
+  document.getElementById("parentFilter").addEventListener("input", (e)=> renderParentOptions(e.target.value));
+  parentSelect.addEventListener("change", ()=>{
+    selectedParentId = parentSelect.value;
+    updateParentWarning();
+  });
+
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+  document.getElementById("addChildFromEditBtn").addEventListener("click", ()=> openAddSheet(personId));
+  document.getElementById("saveEditBtn").addEventListener("click", ()=>{
+    const nameVal = document.getElementById("editName").value.trim();
+    const noteVal = document.getElementById("editNote").value.trim();
+    const locationVal = document.getElementById("editLocation").value.trim();
+    const spouseVal = document.getElementById("editSpouse").value.trim();
+    const deceasedVal = document.getElementById("editDeceased").checked;
+    const uncertainVal = document.getElementById("editUncertain").checked;
+    const genderVal = document.querySelector('input[name="editGender"]:checked').value;
+    const newParentId = selectedParentId || null;
+    if(!nameVal){ showToast("Name can't be empty."); return; }
+    person.name = nameVal;
+    if(genderVal === "F") person.gender = "F"; else delete person.gender;
+    if(spouseVal) person.spouse = spouseVal; else delete person.spouse;
+    if(noteVal) person.note = noteVal; else delete person.note;
+    if(locationVal) person.location = locationVal; else delete person.location;
+    if(deceasedVal) person.deceased = true; else delete person.deceased;
+    if(uncertainVal) person.uncertain = true; else delete person.uncertain;
+    const parentChanged = newParentId !== (person.parentId || null);
+    person.parentId = newParentId;
+    saveData(); closeOverlay(); render();
+    showToast(parentChanged ? "Saved \u2014 moved to new parent" : "Saved");
+  });
+  document.getElementById("deleteBtn").addEventListener("click", ()=>{
+    const desc = allDescendantIds(personId);
+    const confirmMsg = desc.length
+      ? `Delete ${person.name} and ${desc.length} descendant${desc.length>1?"s":""}? This cannot be undone.`
+      : `Delete ${person.name}? This cannot be undone.`;
+    if(!confirm(confirmMsg)) return;
+    const idsToRemove = new Set([personId, ...desc]);
+    people = people.filter(p => !idsToRemove.has(p.id));
+    saveData(); closeOverlay(); render();
+    showToast("Deleted");
+  });
+}
+
+/* ---------- print / PDF ----------
+   Prints the whole tree \u2014 every branch expanded, no search dimming.
+   Scales to fit the chosen page WIDTH only, at a legible size, and lets the
+   height flow naturally across as many pages as it takes (the browser's
+   print engine paginates a tall document automatically). */
+const PAGE_SIZES = {
+  a4:  {label:"A4",  wMm:297, hMm:210},
+  a3:  {label:"A3",  wMm:420, hMm:297},
+  a2:  {label:"A2",  wMm:594, hMm:420},
+  a1:  {label:"A1",  wMm:841, hMm:594},
+  a0:  {label:"A0 (poster \u2014 fewest pages)", wMm:1189, hMm:841}
+};
+const MM_TO_PX = 96/25.4;
+
+function openPrintSheet(){
+  const optionsHtml = Object.entries(PAGE_SIZES).map(([key,v])=>
+    `<option value="${key}" ${key==="a3"?"selected":""}>${v.label}</option>`
+  ).join("");
+  sheet.innerHTML = `
+    <button class="close-x" id="closeSheetBtn">&times;</button>
+    <h2>Print or save as PDF</h2>
+    <div class="hint">This prints the whole tree \u2014 every branch expanded, regardless of what's currently collapsed or filtered \u2014 at a legible size. It fits the page width and flows down across as many pages as it needs; larger paper means fewer pages, not bigger text. "Save as PDF" in the print dialog works even with sizes your printer can't physically handle.</div>
+    <div class="field">
+      <label for="printPageSize">Page size</label>
+      <select id="printPageSize">${optionsHtml}</select>
+    </div>
+    <div class="field checkbox-row">
+      <input type="checkbox" id="printIncludeFemale" ${showFemale ? "checked" : ""}>
+      <label for="printIncludeFemale" style="margin:0; text-transform:none; letter-spacing:normal; font-size:0.82rem;">Include daughters in the printout</label>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="cancelPrintBtn">Cancel</button>
+      <button class="btn btn-primary" id="goPrintBtn">Continue to print dialog</button>
+    </div>
+  `;
+  openOverlay();
+  document.getElementById("closeSheetBtn").addEventListener("click", closeOverlay);
+  document.getElementById("cancelPrintBtn").addEventListener("click", closeOverlay);
+  document.getElementById("goPrintBtn").addEventListener("click", ()=>{
+    const sizeKey = document.getElementById("printPageSize").value;
+    const includeFemale = document.getElementById("printIncludeFemale").checked;
+    closeOverlay();
+    runPrint(sizeKey, includeFemale);
+  });
+}
+
+function runPrint(sizeKey, includeFemale){
+  // Snapshot current view state so we can restore it after printing.
+  const savedCollapsed = collapsedIds;
+  const savedSearch = searchBox.value;
+  const savedStatus = statusFilter.value;
+  const savedShowFemale = showFemale;
+
+  collapsedIds = new Set();       // fully expand every branch
+  searchBox.value = "";           // no dimming from an active search
+  statusFilter.value = "all";
+  showFemale = includeFemale;
+  render();
+
+  const size = PAGE_SIZES[sizeKey];
+  const marginMm = 8;
+  const pageWpx = (size.wMm - marginMm*2) * MM_TO_PX;
+  const viewBox = svg.getAttribute("viewBox").split(" ").map(Number);
+  const contentW = viewBox[2], contentH = viewBox[3];
+  // Fit width only, never upscale past natural size \u2014 height is left to flow
+  // across multiple pages rather than being crushed to fit one.
+  const printScale = Math.min(1, pageWpx / contentW);
+  svg.setAttribute("width", contentW * printScale);
+  svg.setAttribute("height", contentH * printScale);
+
+  const pageStyle = document.createElement("style");
+  pageStyle.id = "dynamicPageSize";
+  pageStyle.textContent = `@page{ size: ${size.wMm}mm ${size.hMm}mm; margin: ${marginMm}mm; }`;
+  document.head.appendChild(pageStyle);
+
+  function restore(){
+    collapsedIds = savedCollapsed;
+    searchBox.value = savedSearch;
+    statusFilter.value = savedStatus;
+    showFemale = savedShowFemale;
+    updateGenderToggleLabel();
+    const styleEl = document.getElementById("dynamicPageSize");
+    if(styleEl) styleEl.remove();
+    render(); // also resets the svg's width/height back to the normal on-screen zoom
+    window.removeEventListener("afterprint", restore);
+  }
+  window.addEventListener("afterprint", restore);
+  setTimeout(()=> window.print(), 80);
+  // Fallback in case afterprint doesn't fire (some mobile browsers)
+  setTimeout(restore, 15000);
+}
+
+/* ---------- init ---------- */
+loadData();
+</script>
+</body>
+</html>
